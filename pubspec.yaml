@@ -1,0 +1,57 @@
+name: botanical_nav
+description: Botanical garden navigation system — frontend for BotanicNav platform.
+version: 1.0.0+1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.7.0 <4.0.0'
+  flutter: '>=3.29.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ── Maps & Location ──────────────────────────────────────────────────────────
+  google_maps_flutter: ^2.9.0         # Outdoor map + polyline rendering
+  geolocator: ^13.0.0                 # GPS position stream
+
+  # ── BLE ──────────────────────────────────────────────────────────────────────
+  flutter_blue_plus: ^1.35.0          # Beacon RSSI scanning (indoor)
+
+  # ── Sensors ──────────────────────────────────────────────────────────────────
+  sensors_plus: ^7.0.0                # Magnetometer → compass heading
+
+  # ── Camera & QR ──────────────────────────────────────────────────────────────
+  camera: ^0.11.0                     # Live camera feed (indoor overlay)
+  mobile_scanner: ^6.0.0              # QR code scanning (section anchoring)
+
+  # ── Networking ───────────────────────────────────────────────────────────────
+  web_socket_channel: ^3.0.0          # Real-time navigation state
+  http: ^1.4.0                        # REST calls to FastAPI backend
+
+  # ── Routing ──────────────────────────────────────────────────────────────────
+  go_router: ^16.0.0                  # Deep-link handling + in-app routing
+
+  # ── State Management ─────────────────────────────────────────────────────────
+  flutter_riverpod: ^3.0.0
+  riverpod_annotation: ^3.0.0
+
+  # ── Config ───────────────────────────────────────────────────────────────────
+  flutter_dotenv: ^5.2.0              # Reads .env for base URL, etc.
+
+  # ── Utilities ────────────────────────────────────────────────────────────────
+  equatable: ^2.0.7                   # Value equality for models
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  build_runner: ^2.6.0
+  riverpod_generator: ^3.0.0
+  custom_lint: ^0.8.1
+  riverpod_lint: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env                            # Bundled at build time; see config/env.dart

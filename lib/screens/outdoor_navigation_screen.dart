@@ -38,7 +38,6 @@ class _OutdoorNavigationScreenState
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
-    _mapController?.setMapStyle(_mapStyle);
   }
 
   // Re-centre camera to user position when GPS updates.
@@ -84,6 +83,7 @@ class _OutdoorNavigationScreenState
           routeAsync.when(
             loading: () => GoogleMap(
               onMapCreated: _onMapCreated,
+              style: _mapStyle,
               initialCameraPosition: CameraPosition(
                 target: initialPosition,
                 zoom: 17,
@@ -101,6 +101,7 @@ class _OutdoorNavigationScreenState
 
               return GoogleMap(
                 onMapCreated: _onMapCreated,
+                style: _mapStyle,
                 initialCameraPosition: CameraPosition(
                   target: initialPosition,
                   zoom: 17,
@@ -224,9 +225,9 @@ class _InstructionBanner extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A2E1A).withOpacity(0.92),
+        color: Color(0xFF1A2E1A).withAlpha((0.92 * 255).round()),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.greenAccent.withOpacity(0.3)),
+        border: Border.all(color: Colors.greenAccent.withAlpha((0.3 * 255).round())),
       ),
       child: Row(
         children: [

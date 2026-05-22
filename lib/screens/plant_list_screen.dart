@@ -1,11 +1,4 @@
 // lib/screens/plant_list_screen.dart
-//
-// Displays the full plant catalogue fetched from GET /api/v1/plants.
-// Users can tap a plant to begin navigation. Tapping triggers the deep-link
-// route so that indoor/outdoor routing is handled centrally by app_router.dart.
-//
-// This screen is the default entry point when the app is opened directly
-// (not via a deep link from the partner app).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,59 +14,305 @@ class PlantListScreen extends ConsumerWidget {
     final plantsAsync = ref.watch(plantsProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A2E1A),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2D4A2D),
-        foregroundColor: Colors.white,
-        title: const Text('BotanicNav'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(plantsProvider),
-            tooltip: 'Refresh plant list',
+      backgroundColor: const Color(0xFF0D1A0D),
+      body: CustomScrollView(
+        slivers: [
+          // ── Hero header ─────────────────────────────────────────────────────
+          SliverToBoxAdapter(child: _HeroHeader()),
+
+          // ── Refresh action bar ───────────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 8, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'All Plants',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, color: Colors.white38),
+                    onPressed: () => ref.invalidate(plantsProvider),
+                    tooltip: 'Refresh',
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Plant list / loading / error ─────────────────────────────────────
+          plantsAsync.when(
+            loading: () => const SliverFillRemaining(
+              child: Center(
+                child: CircularProgressIndicator(color: Colors.greenAccent),
+              ),
+            ),
+            error: (error, _) => SliverFillRemaining(
+              child: _ErrorView(
+                message: error.toString(),
+                onRetry: () => ref.invalidate(plantsProvider),
+              ),
+            ),
+            data: (plants) => _PlantListSliver(plants: plants),
           ),
         ],
-      ),
-      body: plantsAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: Colors.greenAccent),
-        ),
-        error: (error, _) => _ErrorView(
-          message: error.toString(),
-          onRetry: () => ref.invalidate(plantsProvider),
-        ),
-        data: (plants) => _PlantList(plants: plants),
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Plant list
+// Hero header — logo + welcome message
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _PlantList extends StatelessWidget {
-  const _PlantList({required this.plants});
+class _HeroHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0D2B0D), Color(0xFF1A3D1A), Color(0xFF0D2420)],
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 36),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Logo mark ────────────────────────────────────────────────────
+              Row(
+                children: [
+                  _LogoMark(),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'BotanicNav',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                          height: 1.1,
+                        ),
+                      ),
+                      Text(
+                        'Botanical Garden Guide',
+                        style: TextStyle(
+                          color: Colors.greenAccent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 28),
+
+              // ── Welcome message ───────────────────────────────────────────────
+              const Text(
+                'Welcome to the garden.',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Explore thousands of species at your own pace. '
+                'Tap any plant below and we\'ll guide you straight to it — '
+                'outdoors on the map, or deep inside the greenhouse.',
+                style: TextStyle(
+                  color: Colors.white60,
+                  fontSize: 13.5,
+                  height: 1.55,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // ── Stat chips ────────────────────────────────────────────────────
+              const Row(
+                children: [
+                  _StatChip(icon: Icons.park_outlined, label: 'Outdoor trails'),
+                  SizedBox(width: 10),
+                  _StatChip(icon: Icons.home_work_outlined, label: 'Greenhouses'),
+                  SizedBox(width: 10),
+                  _StatChip(icon: Icons.near_me_outlined, label: 'Live guidance'),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // ── Greenhouse map button ─────────────────────────────────────────
+              _GreenhouseMapButton(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Logo mark — SVG-style leaf drawn with Canvas
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _LogoMark extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2E7D32), Color(0xFF00BFA5)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.greenAccent.withOpacity(0.3),
+            blurRadius: 16,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: CustomPaint(painter: _LeafPainter()),
+    );
+  }
+}
+
+class _LeafPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.92)
+      ..style = PaintingStyle.fill;
+
+    // Draw a stylised leaf shape
+    final path = Path();
+    path.moveTo(cx, cy - 16);
+    path.cubicTo(cx + 14, cy - 10, cx + 14, cy + 8, cx, cy + 16);
+    path.cubicTo(cx - 14, cy + 8, cx - 14, cy - 10, cx, cy - 16);
+    canvas.drawPath(path, paint);
+
+    // Centre vein
+    final veinPaint = Paint()
+      ..color = const Color(0xFF2E7D32).withOpacity(0.6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(Offset(cx, cy - 13), Offset(cx, cy + 14), veinPaint);
+
+    // Side veins
+    canvas.drawLine(Offset(cx, cy - 4), Offset(cx + 8, cy + 2), veinPaint);
+    canvas.drawLine(Offset(cx, cy - 4), Offset(cx - 8, cy + 2), veinPaint);
+    canvas.drawLine(Offset(cx, cy + 4), Offset(cx + 7, cy + 9), veinPaint);
+    canvas.drawLine(Offset(cx, cy + 4), Offset(cx - 7, cy + 9), veinPaint);
+  }
+
+  @override
+  bool shouldRepaint(_LeafPainter _) => false;
+}
+
+class _StatChip extends StatelessWidget {
+  const _StatChip({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.greenAccent, size: 13),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GreenhouseMapButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => context.go('/greenhouse-map'),
+        icon: const Icon(Icons.map_outlined, size: 18),
+        label: const Text('View Greenhouse Floor Plan'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.greenAccent,
+          side: const BorderSide(color: Colors.greenAccent, width: 1.2),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plant list sliver
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PlantListSliver extends StatelessWidget {
+  const _PlantListSliver({required this.plants});
   final List<Plant> plants;
 
   @override
   Widget build(BuildContext context) {
     if (plants.isEmpty) {
-      return const Center(
-        child: Text(
-          'No plants found.',
-          style: TextStyle(color: Colors.white54),
+      return const SliverFillRemaining(
+        child: Center(
+          child: Text('No plants found.', style: TextStyle(color: Colors.white54)),
         ),
       );
     }
 
-    // Group into outdoor and indoor sections.
     final outdoor = plants.where((p) => !p.isIndoor).toList();
     final indoor = plants.where((p) => p.isIndoor).toList();
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
+    return SliverList(
+      delegate: SliverChildListDelegate([
         if (outdoor.isNotEmpty) ...[
           _SectionHeader(label: '🌿 Outdoor Plants (${outdoor.length})'),
           ...outdoor.map((p) => _PlantTile(plant: p)),
@@ -82,7 +321,8 @@ class _PlantList extends StatelessWidget {
           _SectionHeader(label: '🏡 Greenhouse Plants (${indoor.length})'),
           ...indoor.map((p) => _PlantTile(plant: p)),
         ],
-      ],
+        const SizedBox(height: 24),
+      ]),
     );
   }
 }
@@ -123,15 +363,14 @@ class _PlantTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      color: const Color(0xFF2D4A2D),
+      color: const Color(0xFF1A2E1A),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
           backgroundColor: plant.isIndoor
-              ? Colors.teal.withOpacity(0.3)
-              : Colors.green.withOpacity(0.3),
+              ? Colors.teal.withOpacity(0.2)
+              : Colors.green.withOpacity(0.2),
           child: Icon(
             plant.isIndoor ? Icons.home_work_outlined : Icons.park_outlined,
             color: plant.isIndoor ? Colors.tealAccent : Colors.greenAccent,
@@ -140,10 +379,7 @@ class _PlantTile extends StatelessWidget {
         ),
         title: Text(
           plant.name,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,10 +399,7 @@ class _PlantTile extends StatelessWidget {
             ),
           ],
         ),
-        trailing: const Icon(
-          Icons.chevron_right,
-          color: Colors.white38,
-        ),
+        trailing: const Icon(Icons.chevron_right, color: Colors.white38),
         onTap: () => _navigate(context),
       ),
     );

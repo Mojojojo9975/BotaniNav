@@ -41,7 +41,7 @@ class HotColdGauge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fillColor = _scoreToColor(score);
-    final emptyColor = Colors.white.withOpacity(0.15);
+    final emptyColor = Colors.white.withAlpha((0.15 * 255).round());
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -83,7 +83,7 @@ class HotColdGauge extends StatelessWidget {
                     borderRadius: BorderRadius.circular(width / 2),
                     boxShadow: [
                       BoxShadow(
-                        color: fillColor.withOpacity(0.55),
+                        color: fillColor.withAlpha((0.55 * 255).round()),
                         blurRadius: 10,
                         spreadRadius: 2,
                       ),

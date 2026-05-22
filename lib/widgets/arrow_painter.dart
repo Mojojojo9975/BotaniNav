@@ -34,7 +34,7 @@ class ArrowPainter extends CustomPainter {
 
     // ── Shadow ────────────────────────────────────────────────────────────────
     final shadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.35)
+      ..color = Colors.black.withAlpha((0.35 * 255).round())
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
 
     _drawArrowPath(canvas, radius, shadowPaint, offset: const Offset(3, 3));
@@ -48,7 +48,7 @@ class ArrowPainter extends CustomPainter {
 
     // ── Arrow stroke ──────────────────────────────────────────────────────────
     final strokePaint = Paint()
-      ..color = Colors.white.withOpacity(0.6)
+      ..color = Colors.white.withAlpha((0.6 * 255).round())
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 

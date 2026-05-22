@@ -12,35 +12,39 @@ dependencies:
     sdk: flutter
 
   # ── Maps & Location ──────────────────────────────────────────────────────────
-  google_maps_flutter: ^2.9.0         # Outdoor map + polyline rendering
-  geolocator: ^13.0.0                 # GPS position stream
+  google_maps_flutter: ^2.9.0
+  geolocator: ^13.0.0
+
+  # ── Indoor Map ───────────────────────────────────────────────────────────────
+  flutter_map: ^7.0.0                 # Tile-free renderer for indoor GeoJSON layers
+  latlong2: ^0.9.0                    # LatLng type used by flutter_map
 
   # ── BLE ──────────────────────────────────────────────────────────────────────
-  flutter_blue_plus: ^1.35.0          # Beacon RSSI scanning (indoor)
+  flutter_blue_plus: ^1.35.0
 
   # ── Sensors ──────────────────────────────────────────────────────────────────
-  sensors_plus: ^7.0.0                # Magnetometer → compass heading
+  sensors_plus: ^7.0.0
 
   # ── Camera & QR ──────────────────────────────────────────────────────────────
-  camera: ^0.11.0                     # Live camera feed (indoor overlay)
-  mobile_scanner: ^6.0.0              # QR code scanning (section anchoring)
+  camera: ^0.11.0
+  mobile_scanner: ^6.0.0
 
   # ── Networking ───────────────────────────────────────────────────────────────
-  web_socket_channel: ^3.0.0          # Real-time navigation state
-  http: ^1.4.0                        # REST calls to FastAPI backend
+  web_socket_channel: ^3.0.0
+  http: ^1.4.0
 
   # ── Routing ──────────────────────────────────────────────────────────────────
-  go_router: ^16.0.0                  # Deep-link handling + in-app routing
+  go_router: ^16.0.0
 
   # ── State Management ─────────────────────────────────────────────────────────
   flutter_riverpod: ^3.0.0
   riverpod_annotation: ^3.0.0
 
   # ── Config ───────────────────────────────────────────────────────────────────
-  flutter_dotenv: ^5.2.0              # Reads .env for base URL, etc.
+  flutter_dotenv: ^5.2.0
 
   # ── Utilities ────────────────────────────────────────────────────────────────
-  equatable: ^2.0.7                   # Value equality for models
+  equatable: ^2.0.7
 
 dev_dependencies:
   flutter_test:
@@ -54,4 +58,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - .env                            # Bundled at build time; see config/env.dart
+    - .env
+    - assets/maps/Section_Layer.geojson
+    - assets/maps/Section_Layer_1.geojson
+    - assets/maps/Section_Layer_2.geojson
+    - assets/maps/Section_Layer_3.geojson

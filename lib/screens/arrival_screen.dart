@@ -26,13 +26,14 @@ class ArrivalScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              
               // ── Arrival icon ─────────────────────────────────────────────
               Container(
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.greenAccent.withOpacity(0.15),
+                  color: Colors.greenAccent.withAlpha((0.15 * 255).round()),
                   border: Border.all(color: Colors.greenAccent, width: 2),
                 ),
                 child: const Icon(

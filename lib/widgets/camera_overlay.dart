@@ -151,7 +151,7 @@ class _Scrim extends StatelessWidget {
           radius: 1.2,
           colors: [
             Colors.transparent,
-            Colors.black.withOpacity(0.45),
+            Colors.black.withAlpha((0.45 * 255).round()),
           ],
         ),
       ),

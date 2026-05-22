@@ -35,7 +35,6 @@ class BotanicNavApp extends ConsumerWidget {
         primary: const Color(0xFF69F0AE),    // greenAccent[200]
         secondary: const Color(0xFF40E0D0),  // tealAccent
         surface: const Color(0xFF1A2E1A),
-        background: const Color(0xFF0D1F0D),
         onSurface: Colors.white,
       ),
       scaffoldBackgroundColor: const Color(0xFF0D1F0D),

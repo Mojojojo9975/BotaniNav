@@ -20,6 +20,7 @@ import '../screens/plant_list_screen.dart';
 import '../screens/outdoor_navigation_screen.dart';
 import '../screens/indoor_navigation_screen.dart';
 import '../screens/arrival_screen.dart';
+import '../screens/greenhouse_map_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Route names — use these constants instead of string literals everywhere.
@@ -112,6 +113,13 @@ GoRouter buildRouter(WidgetRef ref) {
           final plantId = state.pathParameters['plantId']!;
           return IndoorNavigationScreen(plantId: plantId);
         },
+      ),
+
+      // ── Greenhouse floor plan ──────────────────────────────────────────────
+      GoRoute(
+        path: '/greenhouse-map',
+        name: 'greenhouseMap',
+        builder: (context, state) => const GreenhouseMapScreen(),
       ),
 
       // ── Arrival ────────────────────────────────────────────────────────────

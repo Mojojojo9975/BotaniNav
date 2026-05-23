@@ -96,8 +96,8 @@ class _HeroHeader extends StatelessWidget {
                   const SizedBox(width: 14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         'BotanicNav',
                         style: TextStyle(
                           color: Colors.white,
@@ -107,7 +107,7 @@ class _HeroHeader extends StatelessWidget {
                           height: 1.1,
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Botanical Garden Guide',
                         style: TextStyle(
                           color: Colors.greenAccent,
@@ -162,6 +162,11 @@ class _HeroHeader extends StatelessWidget {
 
               // ── Greenhouse map button ─────────────────────────────────────────
               _GreenhouseMapButton(),
+
+              const SizedBox(height: 10),
+
+              // ── Treasure hunt button ──────────────────────────────────────────
+              _TreasureHuntButton(),
             ],
           ),
         ),
@@ -281,6 +286,30 @@ class _GreenhouseMapButton extends StatelessWidget {
           foregroundColor: Colors.greenAccent,
           side: const BorderSide(color: Colors.greenAccent, width: 1.2),
           padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TreasureHuntButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: () => context.go('/treasure-hunt'),
+        icon: const Text('🌿', style: TextStyle(fontSize: 16)),
+        label: const Text('Treasure Hunt'),
+        style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFF1B5E20),
+          foregroundColor: Colors.greenAccent,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          side: BorderSide(
+              color: Colors.greenAccent.withOpacity(0.4), width: 1.2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(32),
           ),

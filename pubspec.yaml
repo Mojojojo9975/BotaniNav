@@ -16,8 +16,8 @@ dependencies:
   geolocator: ^13.0.0
 
   # ── Indoor Map ───────────────────────────────────────────────────────────────
-  flutter_map: ^7.0.0                 # Tile-free renderer for indoor GeoJSON layers
-  latlong2: ^0.9.0                    # LatLng type used by flutter_map
+  flutter_map: ^7.0.0
+  latlong2: ^0.9.0
 
   # ── BLE ──────────────────────────────────────────────────────────────────────
   flutter_blue_plus: ^1.35.0
@@ -25,9 +25,11 @@ dependencies:
   # ── Sensors ──────────────────────────────────────────────────────────────────
   sensors_plus: ^7.0.0
 
-  # ── Camera & QR ──────────────────────────────────────────────────────────────
-  camera: ^0.11.0
+  # ── QR Scanning ──────────────────────────────────────────────────────────────
   mobile_scanner: ^6.0.0
+
+  # ── Camera / Image Picker (Treasure Hunt) ────────────────────────────────────
+  image_picker: ^1.1.2
 
   # ── Networking ───────────────────────────────────────────────────────────────
   web_socket_channel: ^3.0.0
@@ -63,3 +65,4 @@ flutter:
     - assets/maps/Section_Layer_1.geojson
     - assets/maps/Section_Layer_2.geojson
     - assets/maps/Section_Layer_3.geojson
+    - assets/hunt/plants.json

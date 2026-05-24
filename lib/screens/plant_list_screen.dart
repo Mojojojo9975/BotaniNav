@@ -396,25 +396,16 @@ class _PlantTile extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: plant.isIndoor
-              ? Colors.teal.withOpacity(0.2)
-              : Colors.green.withOpacity(0.2),
-          child: Icon(
-            plant.isIndoor ? Icons.home_work_outlined : Icons.park_outlined,
-            color: plant.isIndoor ? Colors.tealAccent : Colors.greenAccent,
-            size: 22,
-          ),
-        ),
+        leading: _PlantAvatar(plant: plant, size: 48),
         title: Text(
-          plant.name,
+          plant.displayName,
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              plant.scientificName,
+              plant.name,
               style: const TextStyle(
                 color: Colors.white60,
                 fontStyle: FontStyle.italic,
@@ -422,9 +413,38 @@ class _PlantTile extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 2),
-            Text(
-              'Section ${plant.section}',
-              style: const TextStyle(color: Colors.white38, fontSize: 11),
+            Row(
+              children: [
+                Text(
+                  'Section ${plant.section}',
+                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                ),
+                if (plant.family != null) ...[
+                  const Text(' · ',
+                      style: TextStyle(color: Colors.white24, fontSize: 11)),
+                  Text(
+                    plant.family!,
+                    style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  ),
+                ],
+                if (plant.placementStatus != null &&
+                    plant.placementStatus != 'Healthy') ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      plant.placementStatus!,
+                      style: const TextStyle(
+                          color: Colors.orange, fontSize: 10),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ],
         ),
@@ -433,6 +453,49 @@ class _PlantTile extends StatelessWidget {
       ),
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared plant avatar — image if available, icon fallback if not
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PlantAvatar extends StatelessWidget {
+  const _PlantAvatar({required this.plant, this.size = 48});
+  final Plant plant;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = plant.displayImageUrl;
+    if (url != null && url.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(size / 2),
+        child: Image.network(
+          url,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _iconFallback(),
+          loadingBuilder: (_, child, progress) => progress == null
+              ? child
+              : _iconFallback(),
+        ),
+      );
+    }
+    return _iconFallback();
+  }
+
+  Widget _iconFallback() => CircleAvatar(
+        radius: size / 2,
+        backgroundColor: plant.isIndoor
+            ? Colors.teal.withOpacity(0.2)
+            : Colors.green.withOpacity(0.2),
+        child: Icon(
+          plant.isIndoor ? Icons.home_work_outlined : Icons.park_outlined,
+          color: plant.isIndoor ? Colors.tealAccent : Colors.greenAccent,
+          size: size * 0.45,
+        ),
+      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

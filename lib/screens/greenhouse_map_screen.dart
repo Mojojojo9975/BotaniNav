@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../models/plant.dart';
+import '../config/section_config.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/plant_provider.dart';
 import '../services/api_service.dart';
@@ -19,7 +20,9 @@ class GreenhouseMapScreen extends ConsumerWidget {
   Map<String, List<Plant>> _buildSectionMap(List<Plant> plants) {
     final map = <String, List<Plant>>{};
     for (final p in plants.where((p) => p.isIndoor && p.section.isNotEmpty)) {
-      map.putIfAbsent(p.section, () => []).add(p);
+      // Normalise "A-12" → "A12" to match GeoJSON marker labels.
+      final key = SectionConfig.normalise(p.section);
+      map.putIfAbsent(key, () => []).add(p);
     }
     return map;
   }
@@ -282,25 +285,8 @@ class _PlantRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          // Icon
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isActive
-                  ? Colors.greenAccent.withOpacity(0.2)
-                  : Colors.white10,
-              border: isActive
-                  ? Border.all(color: Colors.greenAccent, width: 1.5)
-                  : null,
-            ),
-            child: Icon(
-              Icons.eco,
-              color: isActive ? Colors.greenAccent : Colors.white38,
-              size: 20,
-            ),
-          ),
+          // Icon / image
+          _SectionPlantAvatar(plant: plant, isActive: isActive),
           const SizedBox(width: 12),
 
           // Name + scientific name
@@ -758,6 +744,62 @@ class _LegendDot extends StatelessWidget {
           Text(label,
               style: const TextStyle(color: Colors.white60, fontSize: 11)),
         ],
+      );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plant avatar for section bottom sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SectionPlantAvatar extends StatelessWidget {
+  const _SectionPlantAvatar({required this.plant, required this.isActive});
+  final Plant plant;
+  final bool isActive;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = plant.displayImageUrl;
+    final border = isActive
+        ? Border.all(color: Colors.greenAccent, width: 1.5)
+        : null;
+
+    if (url != null && url.isNotEmpty) {
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: border,
+        ),
+        child: ClipOval(
+          child: Image.network(
+            url,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _fallback(),
+            loadingBuilder: (_, child, progress) =>
+                progress == null ? child : _fallback(),
+          ),
+        ),
+      );
+    }
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: isActive
+            ? Colors.greenAccent.withOpacity(0.2)
+            : Colors.white10,
+        border: border,
+      ),
+      child: _fallback(),
+    );
+  }
+
+  Widget _fallback() => Icon(
+        Icons.eco,
+        color: isActive ? Colors.greenAccent : Colors.white38,
+        size: 20,
       );
 }
 

@@ -1,8 +1,4 @@
 // lib/screens/greenhouse_map_screen.dart
-//
-// Two modes:
-//   Browse  (plantId == null) — floor plan with section popups only.
-//   Navigate (plantId != null) — adds arrow, gauge, QR scan, active section.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,12 +14,14 @@ class GreenhouseMapScreen extends ConsumerWidget {
   const GreenhouseMapScreen({super.key, this.plantId});
   final String? plantId;
 
-  /// Build a section → plant-name map from the loaded plant catalogue.
-  Map<String, String> _buildSectionMap(List<Plant> plants) {
-    return {
-      for (final p in plants.where((p) => p.isIndoor && p.section.isNotEmpty))
-        p.section: p.commonNameOrName,
-    };
+  /// Build a section → List<Plant> map from the loaded plant catalogue.
+  /// Multiple plants can share the same section.
+  Map<String, List<Plant>> _buildSectionMap(List<Plant> plants) {
+    final map = <String, List<Plant>>{};
+    for (final p in plants.where((p) => p.isIndoor && p.section.isNotEmpty)) {
+      map.putIfAbsent(p.section, () => []).add(p);
+    }
+    return map;
   }
 
   @override
@@ -39,29 +37,24 @@ class GreenhouseMapScreen extends ConsumerWidget {
     }
 
     final plantsAsync = ref.watch(plantsProvider);
-    final targetPlant = plantId != null
-        ? ref.watch(plantByIdProvider(plantId!))
-        : null;
+    final targetPlant =
+        plantId != null ? ref.watch(plantByIdProvider(plantId!)) : null;
 
-    // Build section→name map from backend plants when available,
-    // fall back to empty map while loading.
     final sectionMap = plantsAsync.whenOrNull(
           data: (plants) => _buildSectionMap(plants),
         ) ??
         {};
 
-    final activeSection = targetPlant?.section;
-
     return _GreenhouseMapScaffold(
       plantId: plantId,
       sectionPlantMap: sectionMap,
-      activeSection: activeSection,
+      activeSection: targetPlant?.section,
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Stateful scaffold (owns QR scanner visibility)
+// Stateful scaffold
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _GreenhouseMapScaffold extends ConsumerStatefulWidget {
@@ -71,7 +64,7 @@ class _GreenhouseMapScaffold extends ConsumerStatefulWidget {
     required this.activeSection,
   });
   final String? plantId;
-  final Map<String, String> sectionPlantMap;
+  final Map<String, List<Plant>> sectionPlantMap;
   final String? activeSection;
 
   @override
@@ -83,6 +76,19 @@ class _GreenhouseMapScaffoldState
     extends ConsumerState<_GreenhouseMapScaffold> {
   bool _scannerVisible = false;
 
+  void _onSectionTapped(String label, List<Plant> plants) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _SectionBottomSheet(
+        sectionLabel: label,
+        plants: plants,
+        currentPlantId: widget.plantId,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -90,14 +96,13 @@ class _GreenhouseMapScaffoldState
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Floor plan ────────────────────────────────────────────────────
           IndoorMapWidget(
             plantId: widget.plantId,
             activeSection: widget.activeSection,
             sectionPlantMap: widget.sectionPlantMap,
+            onSectionTapped: _onSectionTapped,
           ),
 
-          // ── Top bar ───────────────────────────────────────────────────────
           Positioned(
             top: 0, left: 0, right: 0,
             child: SafeArea(
@@ -107,7 +112,6 @@ class _GreenhouseMapScaffoldState
             ),
           ),
 
-          // ── Navigation overlays ───────────────────────────────────────────
           if (widget.plantId != null) ...[
             Positioned(
               bottom: 48, left: 24,
@@ -125,18 +129,257 @@ class _GreenhouseMapScaffoldState
             ),
           ],
 
-          // ── Legend (browse mode) ──────────────────────────────────────────
           if (widget.plantId == null)
             Positioned(
               bottom: 24, left: 0, right: 0,
               child: Center(child: _Legend()),
             ),
 
-          // ── QR scanner overlay ────────────────────────────────────────────
           if (_scannerVisible)
             _QrScannerOverlay(
               plantId: widget.plantId ?? '',
               onClose: () => setState(() => _scannerVisible = false),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Section bottom sheet — scrollable list of all plants in a section
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SectionBottomSheet extends StatelessWidget {
+  const _SectionBottomSheet({
+    required this.sectionLabel,
+    required this.plants,
+    this.currentPlantId,
+  });
+
+  final String sectionLabel;
+  final List<Plant> plants;
+  final String? currentPlantId;
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: plants.length == 1 ? 0.28 : 0.45,
+      minChildSize: 0.2,
+      maxChildSize: 0.85,
+      expand: false,
+      builder: (_, scrollController) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A2E1A),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.greenAccent.withOpacity(0.15),
+                      border: Border.all(
+                          color: Colors.greenAccent.withOpacity(0.5)),
+                    ),
+                    child: Center(
+                      child: Text(
+                        sectionLabel,
+                        style: const TextStyle(
+                          color: Colors.greenAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Section $sectionLabel',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                        ),
+                      ),
+                      Text(
+                        '${plants.length} plant${plants.length == 1 ? '' : 's'}',
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(color: Colors.white12, height: 1),
+
+            // Scrollable plant list
+            Expanded(
+              child: ListView.separated(
+                controller: scrollController,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
+                itemCount: plants.length,
+                separatorBuilder: (_, __) =>
+                    const Divider(color: Colors.white12, height: 1),
+                itemBuilder: (_, i) => _PlantRow(
+                  plant: plants[i],
+                  isActive: plants[i].id == currentPlantId,
+                  onNavigate: () {
+                    Navigator.of(context).pop();
+                    context.go('/navigate/indoor/${plants[i].id}');
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PlantRow extends StatelessWidget {
+  const _PlantRow({
+    required this.plant,
+    required this.isActive,
+    required this.onNavigate,
+  });
+
+  final Plant plant;
+  final bool isActive;
+  final VoidCallback onNavigate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          // Icon
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isActive
+                  ? Colors.greenAccent.withOpacity(0.2)
+                  : Colors.white10,
+              border: isActive
+                  ? Border.all(color: Colors.greenAccent, width: 1.5)
+                  : null,
+            ),
+            child: Icon(
+              Icons.eco,
+              color: isActive ? Colors.greenAccent : Colors.white38,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // Name + scientific name
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        plant.name,
+                        style: TextStyle(
+                          color: isActive
+                              ? Colors.greenAccent
+                              : Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    if (isActive)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.greenAccent.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: Colors.greenAccent.withOpacity(0.4)),
+                        ),
+                        child: const Text(
+                          'Navigating',
+                          style: TextStyle(
+                            color: Colors.greenAccent,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  plant.scientificName,
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontStyle: FontStyle.italic,
+                    fontSize: 12,
+                  ),
+                ),
+                if (plant.description != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    plant.description!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: Colors.white38, fontSize: 11, height: 1.4),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          // Navigate button
+          if (!isActive)
+            IconButton(
+              onPressed: onNavigate,
+              icon: const Icon(Icons.near_me_outlined,
+                  color: Colors.greenAccent, size: 22),
+              tooltip: 'Navigate here',
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.greenAccent.withOpacity(0.1),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
             ),
         ],
       ),
@@ -268,7 +511,7 @@ class _NavTopBar extends ConsumerWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Arrow + gauge panels
+// Arrow + Gauge panels
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ArrowPanel extends ConsumerWidget {
@@ -279,23 +522,24 @@ class _ArrowPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final angle = ref.watch(arrowAngleProvider(plantId));
     return Container(
-      width: 72, height: 72,
+      width: 72,
+      height: 72,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.black.withOpacity(0.65),
-        border: Border.all(
-            color: Colors.greenAccent.withOpacity(0.5), width: 1.5),
+        border:
+            Border.all(color: Colors.greenAccent.withOpacity(0.5), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.greenAccent.withOpacity(0.15),
-            blurRadius: 12, spreadRadius: 2,
-          ),
+              color: Colors.greenAccent.withOpacity(0.15),
+              blurRadius: 12,
+              spreadRadius: 2),
         ],
       ),
       child: Transform.rotate(
         angle: angle * 3.14159265 / 180,
-        child: const Icon(Icons.navigation,
-            color: Colors.greenAccent, size: 34),
+        child:
+            const Icon(Icons.navigation, color: Colors.greenAccent, size: 34),
       ),
     );
   }
@@ -328,15 +572,15 @@ class _HotColdPanel extends ConsumerWidget {
               style: const TextStyle(fontSize: 18)),
           const SizedBox(height: 6),
           SizedBox(
-            height: 100, width: 16,
+            height: 100,
+            width: 16,
             child: Stack(
               alignment: Alignment.bottomCenter,
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white12,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                      color: Colors.white12,
+                      borderRadius: BorderRadius.circular(8)),
                 ),
                 AnimatedFractionallySizedBox(
                   duration: const Duration(milliseconds: 600),
@@ -348,7 +592,7 @@ class _HotColdPanel extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
-                          color: color.withOpacity(0.5), blurRadius: 8),
+                            color: color.withOpacity(0.5), blurRadius: 8)
                       ],
                     ),
                   ),
@@ -363,7 +607,7 @@ class _HotColdPanel extends ConsumerWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// QR button + scanner overlay
+// QR button + scanner
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _QrButton extends StatelessWidget {
@@ -379,8 +623,8 @@ class _QrButton extends StatelessWidget {
           onTap: onPressed,
           child: const Padding(
             padding: EdgeInsets.all(14),
-            child:
-                Icon(Icons.qr_code_scanner, color: Colors.black87, size: 24),
+            child: Icon(Icons.qr_code_scanner,
+                color: Colors.black87, size: 24),
           ),
         ),
       );
@@ -427,17 +671,20 @@ class _QrScannerOverlayState extends ConsumerState<_QrScannerOverlay> {
       children: [
         MobileScanner(onDetect: _onDetect),
         Positioned(
-          top: 48, right: 16,
+          top: 48,
+          right: 16,
           child: SafeArea(
             child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white, size: 30),
+              icon:
+                  const Icon(Icons.close, color: Colors.white, size: 30),
               onPressed: widget.onClose,
             ),
           ),
         ),
         Center(
           child: Container(
-            width: 240, height: 240,
+            width: 240,
+            height: 240,
             decoration: BoxDecoration(
               border: Border.all(color: Colors.tealAccent, width: 2),
               borderRadius: BorderRadius.circular(12),
@@ -445,12 +692,15 @@ class _QrScannerOverlayState extends ConsumerState<_QrScannerOverlay> {
           ),
         ),
         Positioned(
-          bottom: 80, left: 0, right: 0,
+          bottom: 80,
+          left: 0,
+          right: 0,
           child: Text(
             'Point at a section QR code',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.85), fontSize: 14,
+              color: Colors.white.withOpacity(0.85),
+              fontSize: 14,
               shadows: const [Shadow(blurRadius: 4, color: Colors.black)],
             ),
           ),
@@ -466,28 +716,27 @@ class _QrScannerOverlayState extends ConsumerState<_QrScannerOverlay> {
 
 class _Legend extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white12),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _LegendDot(color: Color(0xFF1E3A1E), label: 'Areas'),
-          SizedBox(width: 14),
-          _LegendDot(color: Color(0xFF4CAF50), label: 'Walls'),
-          SizedBox(width: 14),
-          _LegendDot(color: Colors.greenAccent, label: 'Has plant'),
-          SizedBox(width: 14),
-          _LegendDot(color: Colors.white38, label: 'Empty'),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.6),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _LegendDot(color: Color(0xFF1E3A1E), label: 'Areas'),
+            SizedBox(width: 14),
+            _LegendDot(color: Color(0xFF4CAF50), label: 'Walls'),
+            SizedBox(width: 14),
+            _LegendDot(color: Colors.greenAccent, label: 'Has plant'),
+            SizedBox(width: 14),
+            _LegendDot(color: Colors.white38, label: 'Empty'),
+          ],
+        ),
+      );
 }
 
 class _LegendDot extends StatelessWidget {
@@ -500,8 +749,10 @@ class _LegendDot extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 10, height: 10,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            width: 10,
+            height: 10,
+            decoration:
+                BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 5),
           Text(label,
@@ -509,10 +760,6 @@ class _LegendDot extends StatelessWidget {
         ],
       );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Extension — Plant.commonNameOrName helper
-// ─────────────────────────────────────────────────────────────────────────────
 
 extension PlantDisplayName on Plant {
   String get commonNameOrName => name;

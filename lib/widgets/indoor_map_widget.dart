@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
+import '../models/plant.dart';
 import '../services/geojson_service.dart';
 import '../providers/plant_provider.dart';
 
@@ -21,6 +22,7 @@ class IndoorMapWidget extends ConsumerStatefulWidget {
     this.plantId,
     this.activeSection,
     this.sectionPlantMap,
+    this.onSectionTapped,
   });
 
   /// When non-null, shows a target pin for this plant's coordinates.
@@ -29,9 +31,11 @@ class IndoorMapWidget extends ConsumerStatefulWidget {
   /// Section label to highlight (e.g. "A8") — glows green.
   final String? activeSection;
 
-  /// Maps section label → plant name for tap popups.
-  /// e.g. {"A8": "Bird of Paradise", "B2": "Corpse Lily"}
-  final Map<String, String>? sectionPlantMap;
+  /// Maps section label → list of plants in that section.
+  final Map<String, List<Plant>>? sectionPlantMap;
+
+  /// Called when the user taps a section marker that has plants.
+  final void Function(String label, List<Plant> plants)? onSectionTapped;
 
   @override
   ConsumerState<IndoorMapWidget> createState() => _IndoorMapWidgetState();
@@ -42,9 +46,7 @@ class _IndoorMapWidgetState extends ConsumerState<IndoorMapWidget>
   final _mapController = MapController();
   IndoorMapData? _mapData;
   String? _error;
-  SectionPoint? _tappedSection;
 
-  // Pulse animation for active section marker
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnim;
 
@@ -91,9 +93,7 @@ class _IndoorMapWidgetState extends ConsumerState<IndoorMapWidget>
       }
     }
 
-    return Stack(
-      children: [
-        FlutterMap(
+    return FlutterMap(
           mapController: _mapController,
           options: MapOptions(
             initialCenter: data.bounds.centre,
@@ -104,8 +104,6 @@ class _IndoorMapWidgetState extends ConsumerState<IndoorMapWidget>
             interactionOptions: const InteractionOptions(
               flags: InteractiveFlag.all,
             ),
-            // Dismiss popup on map tap
-            onTap: (_, __) => setState(() => _tappedSection = null),
           ),
           children: [
             // ── 1. Filled floor areas ───────────────────────────────────────
@@ -146,16 +144,16 @@ class _IndoorMapWidgetState extends ConsumerState<IndoorMapWidget>
             MarkerLayer(
               markers: data.sectionPoints.map((sp) {
                 final isActive = widget.activeSection == sp.label;
-                final plantName = widget.sectionPlantMap?[sp.label];
+                final plants = widget.sectionPlantMap?[sp.label] ?? [];
+                final hasPlants = plants.isNotEmpty;
                 return Marker(
                   point: sp.position,
                   width: isActive ? 44 : 36,
                   height: isActive ? 22 : 18,
                   child: GestureDetector(
-                    onTap: () => setState(() {
-                      _tappedSection =
-                          _tappedSection?.label == sp.label ? null : sp;
-                    }),
+                    onTap: hasPlants
+                        ? () => widget.onSectionTapped?.call(sp.label, plants)
+                        : null,
                     child: isActive
                         ? AnimatedBuilder(
                             animation: _pulseAnim,
@@ -166,7 +164,7 @@ class _IndoorMapWidgetState extends ConsumerState<IndoorMapWidget>
                           )
                         : _SectionLabel(
                             label: sp.label,
-                            hasPlant: plantName != null,
+                            hasPlant: hasPlants,
                           ),
                   ),
                 );
@@ -195,22 +193,7 @@ class _IndoorMapWidgetState extends ConsumerState<IndoorMapWidget>
               ),
             ),
           ],
-        ),
-
-        // ── Section popup (rendered outside FlutterMap to avoid clipping) ───
-        if (_tappedSection != null)
-          Positioned(
-            bottom: 100,
-            left: 16,
-            right: 16,
-            child: _SectionPopup(
-              section: _tappedSection!,
-              plantName: widget.sectionPlantMap?[_tappedSection!.label],
-              onClose: () => setState(() => _tappedSection = null),
-            ),
-          ),
-      ],
-    );
+        );
   }
 }
 
@@ -283,112 +266,6 @@ class _ActiveSectionLabel extends StatelessWidget {
           ),
         ),
       );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Section popup card
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _SectionPopup extends StatelessWidget {
-  const _SectionPopup({
-    required this.section,
-    required this.onClose,
-    this.plantName,
-  });
-  final SectionPoint section;
-  final String? plantName;
-  final VoidCallback onClose;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A2E1A),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: plantName != null
-                ? Colors.greenAccent.withOpacity(0.4)
-                : Colors.white12,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Section badge
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: plantName != null
-                    ? Colors.greenAccent.withOpacity(0.15)
-                    : Colors.white10,
-                border: Border.all(
-                  color: plantName != null
-                      ? Colors.greenAccent.withOpacity(0.5)
-                      : Colors.white24,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  section.label,
-                  style: TextStyle(
-                    color: plantName != null
-                        ? Colors.greenAccent
-                        : Colors.white60,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    plantName ?? 'Empty section',
-                    style: TextStyle(
-                      color: plantName != null
-                          ? Colors.white
-                          : Colors.white38,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    plantName != null
-                        ? 'Greenhouse section ${section.label}'
-                        : 'No plant assigned to this section',
-                    style: const TextStyle(
-                        color: Colors.white54, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.close, color: Colors.white38, size: 18),
-              onPressed: onClose,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

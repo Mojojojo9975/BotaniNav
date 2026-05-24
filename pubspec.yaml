@@ -25,6 +25,9 @@ dependencies:
   # ── Sensors ──────────────────────────────────────────────────────────────────
   sensors_plus: ^7.0.0
 
+  # ── Permissions ──────────────────────────────────────────────────────────────
+  permission_handler: ^11.3.0         # Runtime permission requests on device
+
   # ── QR Scanning ──────────────────────────────────────────────────────────────
   mobile_scanner: ^6.0.0
 

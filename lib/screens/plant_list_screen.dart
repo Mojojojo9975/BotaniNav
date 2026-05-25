@@ -96,8 +96,13 @@ class _HeroHeader extends StatelessWidget {
                   const SizedBox(width: 14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+<<<<<<< HEAD
                     children: const [
                       Text(
+=======
+                    children: [
+                      const Text(
+>>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
                         'BotanicNav',
                         style: TextStyle(
                           color: Colors.white,
@@ -107,7 +112,11 @@ class _HeroHeader extends StatelessWidget {
                           height: 1.1,
                         ),
                       ),
+<<<<<<< HEAD
                       Text(
+=======
+                      const Text(
+>>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
                         'Botanical Garden Guide',
                         style: TextStyle(
                           color: Colors.greenAccent,
@@ -162,6 +171,14 @@ class _HeroHeader extends StatelessWidget {
 
               // ── Greenhouse map button ─────────────────────────────────────────
               _GreenhouseMapButton(),
+<<<<<<< HEAD
+=======
+
+              const SizedBox(height: 10),
+
+              // ── Treasure hunt button ──────────────────────────────────────────
+              _TreasureHuntButton(),
+>>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
             ],
           ),
         ),
@@ -290,6 +307,33 @@ class _GreenhouseMapButton extends StatelessWidget {
   }
 }
 
+<<<<<<< HEAD
+=======
+class _TreasureHuntButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: () => context.go('/treasure-hunt'),
+        icon: const Text('🌿', style: TextStyle(fontSize: 16)),
+        label: const Text('Treasure Hunt'),
+        style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFF1B5E20),
+          foregroundColor: Colors.greenAccent,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          side: BorderSide(
+              color: Colors.greenAccent.withOpacity(0.4), width: 1.2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+>>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
 // ─────────────────────────────────────────────────────────────────────────────
 // Plant list sliver
 // ─────────────────────────────────────────────────────────────────────────────

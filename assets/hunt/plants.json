@@ -1,0 +1,100 @@
+{
+  "plants": [
+    {
+      "id": "hunt_001",
+      "common_name": "Bird of Paradise",
+      "scientific_name": "Strelitzia reginae",
+      "section": "A8",
+      "image_description": "Large paddle-shaped grey-green leaves on long petioles, with striking orange and vivid blue flowers emerging from a boat-shaped green and red bract",
+      "hints": {
+        "easy": "Find the plant in section A8 with dramatic orange and deep-blue flowers that look like a tropical bird taking flight.",
+        "medium": "This South African plant is famous for its bird-like blooms in orange and blue. It thrives in warm, sunny greenhouse sections.",
+        "hard": "A monocot of the family Strelitziaceae, adapted for ornithophily, with boat-shaped spathes housing successive florets — native to coastal scrub of the Eastern Cape."
+      }
+    },
+    {
+      "id": "hunt_002",
+      "common_name": "Corpse Lily",
+      "scientific_name": "Amorphophallus titanum",
+      "section": "B2",
+      "image_description": "An enormous mottled green and white spathe surrounding a tall pale yellow-green spadix, with a deeply lobed single leaf on a heavily patterned stalk when not in bloom",
+      "hints": {
+        "easy": "Look in section B2 for the world's largest unbranched flower. It has a huge funnel-shaped bloom and is known for its unusual smell when it opens.",
+        "medium": "This Sumatran giant produces a single massive inflorescence that can reach over two metres tall and only blooms for 24–48 hours at a time.",
+        "hard": "A thermogenic aroid from the lowland rainforests of Sumatra — its spadix produces volatile amines to attract carrion-feeding pollinators during anthesis."
+      }
+    },
+    {
+      "id": "hunt_003",
+      "common_name": "Venus Flytrap",
+      "scientific_name": "Dionaea muscipula",
+      "section": "D5",
+      "image_description": "Small rosette of bright-green leaves, each tipped with a hinged bi-lobed trap fringed with long stiff teeth and red coloration inside",
+      "hints": {
+        "easy": "Find the famous carnivorous plant in section D5 — the one with the snap-shut jaw-like leaves that catch insects!",
+        "medium": "Native to the Carolina bogs of North America, this small carnivore uses modified leaves as active traps triggered by touch-sensitive hairs.",
+        "hard": "A dionaeaphyte relying on a rapid turgor-driven thigmonastic response — two stimulations within 20 seconds are required to close the trap and avoid false triggering."
+      }
+    },
+    {
+      "id": "hunt_004",
+      "common_name": "Rafflesia",
+      "scientific_name": "Rafflesia arnoldii",
+      "section": "B3",
+      "image_description": "A massive rust-red flower up to one metre across with five thick mottled petals covered in pale wart-like spots, a central disc-like structure, and no visible leaves or stem",
+      "hints": {
+        "easy": "In section B3 you'll find the world's largest individual flower — a huge red and white spotted bloom with no leaves or stem of its own.",
+        "medium": "This Malaysian parasite has no roots, stems, or leaves — the flower is the entire visible plant. Look for its enormous rust-red petals.",
+        "hard": "A holoparasite of the genus Rafflesia in the family Cytinaceae, entirely endophytic within Tetrastigma vines except during anthesis, when it produces the largest known single flower."
+      }
+    },
+    {
+      "id": "hunt_005",
+      "common_name": "Blue Torch Cactus",
+      "scientific_name": "Pilosocereus pachycladus",
+      "section": "E2",
+      "image_description": "Tall columnar blue-green stems with distinct ribs lined with clusters of golden-yellow spines and white woolly areoles, growing in an upright candelabra form",
+      "hints": {
+        "easy": "Look in section E2 for the tall blue-green cactus with golden spines running in neat vertical rows up its column-shaped body.",
+        "medium": "This Brazilian cerrado cactus is known for its striking powdery blue stem colour and prominent yellow spines. It grows in tall columns over time.",
+        "hard": "A cereid cactus of the caatinga biome — the bluish epicuticular wax coating reduces UV damage and water loss in its semi-arid native habitat of northeastern Brazil."
+      }
+    },
+    {
+      "id": "hunt_006",
+      "common_name": "Traveller's Palm",
+      "scientific_name": "Ravenala madagascariensis",
+      "section": "A2",
+      "image_description": "Giant fan-shaped arrangement of enormous banana-like leaves all emerging in a single flat plane, with long sheathed petioles that collect rainwater at their base",
+      "hints": {
+        "easy": "Find the dramatic palm-like plant in section A2 whose enormous leaves are all arranged in a perfect flat fan shape — like a giant green hand of cards.",
+        "medium": "Despite its name, this Madagascan plant is not a true palm but a relative of Bird of Paradise. Its leaf bases store water, historically used by travellers.",
+        "hard": "A monotypic genus in the family Strelitziaceae — its distichous phyllotaxy creates the characteristic planar fan, and the ochreate petioles accumulate significant volumes of rainwater."
+      }
+    },
+    {
+      "id": "hunt_007",
+      "common_name": "Pitcher Plant",
+      "scientific_name": "Nepenthes rajah",
+      "section": "D8",
+      "image_description": "Dark green leaves with tendrils terminating in large pitcher-shaped traps up to 40cm tall, deep red-purple inside, with a wide ribbed peristome and a lid held above the opening",
+      "hints": {
+        "easy": "In section D8, look for the carnivorous plant whose leaves end in large bucket-shaped pitchers — some big enough to hold a litre of digestive liquid!",
+        "medium": "This Bornean highland pitcher plant is one of the largest carnivorous plants in the world, capable of trapping not just insects but small vertebrates.",
+        "hard": "A highland Nepenthes endemic to ultramafic substrates of Mount Kinabalu, Borneo — its pitchers can exceed 3.5 litres and are known to collect nutrients from vertebrate faeces via mutualistic relationships."
+      }
+    },
+    {
+      "id": "hunt_008",
+      "common_name": "Wax Plant",
+      "scientific_name": "Hoya carnosa",
+      "section": "F1",
+      "image_description": "Thick, waxy dark-green oval leaves on twining stems, with rounded clusters of small star-shaped pink flowers each with a pale pink corona and a glossy waxy appearance",
+      "hints": {
+        "easy": "Find the climbing plant in section F1 with thick shiny leaves and perfect little star-shaped pink flower clusters that look like they're made of wax.",
+        "medium": "This popular trailing houseplant from East Asia produces perfect spherical umbels of fragrant, waxy pink star flowers. It clings to supports with its twining stems.",
+        "hard": "An asclepiadaceous epiphyte from the margins of East Asian tropical forests — the succulent leaves and wax-coated flowers reduce desiccation; the corona structure guides lepidopteran pollinators to nectaries."
+      }
+    }
+  ]
+}

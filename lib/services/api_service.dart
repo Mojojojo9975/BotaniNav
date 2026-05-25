@@ -74,10 +74,19 @@ class ApiService {
   // ── Public API ─────────────────────────────────────────────────────────────
 
   /// GET /api/v1/plants
-  /// Returns the full plant catalogue for the garden.
+  /// Response is wrapped: {"count": N, "plants": [...]}.
   Future<List<Plant>> getPlants() async {
-    final data = await _get('/plants') as List<dynamic>;
-    return data
+    final data = await _get('/plants');
+    // Unwrap envelope — handle both wrapped {"plants": [...]} and flat [...].
+    final List<dynamic> list;
+    if (data is Map && data.containsKey('plants')) {
+      list = data['plants'] as List<dynamic>;
+    } else if (data is List) {
+      list = data;
+    } else {
+      throw ApiException(200, 'Unexpected plants response format');
+    }
+    return list
         .map((json) => Plant.fromJson(json as Map<String, dynamic>))
         .toList();
   }

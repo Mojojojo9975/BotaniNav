@@ -1,22 +1,3 @@
-<<<<<<< HEAD
-# flutter_application_1
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-=======
 # BotanicNav
 
 Flutter frontend for the BotanicNav platform — guides botanical garden visitors to plants via outdoor GPS navigation and indoor BLE + camera-based navigation.
@@ -234,4 +215,3 @@ The following features are scaffolded with mock data and will activate once the 
 - **QR scan endpoint** — `POST /api/v1/scan` — remove the `UnimplementedError` in `api_service.dart` and uncomment the real call
 
 All pending items are marked with `// TODO [Backend Phase 3 / Hardware]` throughout the codebase.
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5

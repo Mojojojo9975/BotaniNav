@@ -624,8 +624,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
-<<<<<<< HEAD
-=======
   image_picker:
     dependency: "direct main"
     description:
@@ -690,7 +688,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.2"
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
   intl:
     dependency: transitive
     description:

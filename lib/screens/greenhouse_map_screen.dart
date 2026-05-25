@@ -1,21 +1,11 @@
 // lib/screens/greenhouse_map_screen.dart
-<<<<<<< HEAD
-//
-// Standalone floor plan viewer — shows all GeoJSON layers without starting
-// navigation for any specific plant. Accessible from the landing page.
-
-import 'package:flutter/material.dart';
-import '../widgets/indoor_map_widget.dart';
-
-class GreenhouseMapScreen extends StatelessWidget {
-  const GreenhouseMapScreen({super.key});
-=======
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../models/plant.dart';
+import '../config/section_config.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/plant_provider.dart';
 import '../services/api_service.dart';
@@ -30,7 +20,9 @@ class GreenhouseMapScreen extends ConsumerWidget {
   Map<String, List<Plant>> _buildSectionMap(List<Plant> plants) {
     final map = <String, List<Plant>>{};
     for (final p in plants.where((p) => p.isIndoor && p.section.isNotEmpty)) {
-      map.putIfAbsent(p.section, () => []).add(p);
+      // Normalise "A-12" → "A12" to match GeoJSON marker labels.
+      final key = SectionConfig.normalise(p.section);
+      map.putIfAbsent(key, () => []).add(p);
     }
     return map;
   }
@@ -99,32 +91,11 @@ class _GreenhouseMapScaffoldState
       ),
     );
   }
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0D1A0D),
-<<<<<<< HEAD
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0D1A0D),
-        foregroundColor: Colors.white,
-        title: const Text('Greenhouse Floor Plan'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Row(
-              children: [
-                _Legend(color: const Color(0xFF1E3A1E), label: 'Areas'),
-                const SizedBox(width: 10),
-                _Legend(color: const Color(0xFF4CAF50), label: 'Walls'),
-                const SizedBox(width: 10),
-                _Legend(color: Colors.greenAccent, label: 'Sections'),
-=======
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -314,25 +285,8 @@ class _PlantRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          // Icon
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isActive
-                  ? Colors.greenAccent.withOpacity(0.2)
-                  : Colors.white10,
-              border: isActive
-                  ? Border.all(color: Colors.greenAccent, width: 1.5)
-                  : null,
-            ),
-            child: Icon(
-              Icons.eco,
-              color: isActive ? Colors.greenAccent : Colors.white38,
-              size: 20,
-            ),
-          ),
+          // Icon / image
+          _SectionPlantAvatar(plant: plant, isActive: isActive),
           const SizedBox(width: 12),
 
           // Name + scientific name
@@ -455,40 +409,15 @@ class _BrowseTopBar extends StatelessWidget {
                 _LegendDot(color: Colors.greenAccent, label: 'Has plant'),
                 const SizedBox(width: 10),
                 _LegendDot(color: Colors.white38, label: 'Empty'),
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
               ],
             ),
           ),
         ],
       ),
-<<<<<<< HEAD
-      body: const IndoorMapWidget(),
-=======
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
     );
   }
 }
 
-<<<<<<< HEAD
-class _Legend extends StatelessWidget {
-  const _Legend({required this.color, required this.label});
-  final Color color;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 4),
-        Text(label,
-            style: const TextStyle(color: Colors.white54, fontSize: 10)),
-=======
 class _NavTopBar extends ConsumerWidget {
   const _NavTopBar({required this.plantId});
   final String plantId;
@@ -762,13 +691,10 @@ class _QrScannerOverlayState extends ConsumerState<_QrScannerOverlay> {
             ),
           ),
         ),
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
       ],
     );
   }
 }
-<<<<<<< HEAD
-=======
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Legend
@@ -821,7 +747,62 @@ class _LegendDot extends StatelessWidget {
       );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Plant avatar for section bottom sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SectionPlantAvatar extends StatelessWidget {
+  const _SectionPlantAvatar({required this.plant, required this.isActive});
+  final Plant plant;
+  final bool isActive;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = plant.displayImageUrl;
+    final border = isActive
+        ? Border.all(color: Colors.greenAccent, width: 1.5)
+        : null;
+
+    if (url != null && url.isNotEmpty) {
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: border,
+        ),
+        child: ClipOval(
+          child: Image.network(
+            url,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _fallback(),
+            loadingBuilder: (_, child, progress) =>
+                progress == null ? child : _fallback(),
+          ),
+        ),
+      );
+    }
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: isActive
+            ? Colors.greenAccent.withOpacity(0.2)
+            : Colors.white10,
+        border: border,
+      ),
+      child: _fallback(),
+    );
+  }
+
+  Widget _fallback() => Icon(
+        Icons.eco,
+        color: isActive ? Colors.greenAccent : Colors.white38,
+        size: 20,
+      );
+}
+
 extension PlantDisplayName on Plant {
   String get commonNameOrName => name;
 }
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5

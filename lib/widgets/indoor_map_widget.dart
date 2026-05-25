@@ -1,51 +1,6 @@
 // lib/widgets/indoor_map_widget.dart
 //
 // Renders the indoor floor plan from four GeoJSON layers using flutter_map.
-<<<<<<< HEAD
-// No tile server required — the map background is plain dark canvas.
-//
-// Layer render order (bottom → top):
-//   1. PolygonLayer    — filled floor areas / wall masses   (Section_Layer_1)
-//   2. PolylineLayer   — primary wall outlines              (Section_Layer_2)
-//   3. PolylineLayer   — secondary line detail              (Section_Layer_3)
-//   4. MarkerLayer     — section labels A1, B2, …           (Section_Layer)
-//   5. (optional) user position dot if [userPosition] is provided
-
-import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
-import '../services/geojson_service.dart';
-
-class IndoorMapWidget extends StatefulWidget {
-  const IndoorMapWidget({
-    super.key,
-    this.userPosition,
-    this.targetPosition,
-  });
-
-  /// Live user position — shown as a blue dot if non-null.
-  final LatLng? userPosition;
-
-  /// Target plant position — shown as a green pin if non-null.
-  final LatLng? targetPosition;
-
-  @override
-  State<IndoorMapWidget> createState() => _IndoorMapWidgetState();
-}
-
-class _IndoorMapWidgetState extends State<IndoorMapWidget> {
-  late final MapController _mapController;
-  IndoorMapData? _mapData;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _mapController = MapController();
-    _loadMap();
-  }
-
-=======
 //
 // Section markers are tappable — tapping one shows a popup card with the
 // plant name assigned to that section.
@@ -114,7 +69,6 @@ class _IndoorMapWidgetState extends ConsumerState<IndoorMapWidget>
     super.dispose();
   }
 
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
   Future<void> _loadMap() async {
     try {
       final data = await GeoJsonService.loadIndoorMap();
@@ -126,114 +80,6 @@ class _IndoorMapWidgetState extends ConsumerState<IndoorMapWidget>
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-    if (_error != null) {
-      return _MapError(message: _error!);
-    }
-
-    if (_mapData == null) {
-      return const _MapLoading();
-    }
-
-    final data = _mapData!;
-    final centre = data.bounds.centre;
-    final zoom = data.bounds.fitZoom;
-
-    return FlutterMap(
-      mapController: _mapController,
-      options: MapOptions(
-        initialCenter: centre,
-        initialZoom: zoom,
-        minZoom: zoom - 3,
-        maxZoom: zoom + 5,
-        backgroundColor: const Color(0xFF0D1A0D),
-        interactionOptions: const InteractionOptions(
-          flags: InteractiveFlag.all,
-        ),
-      ),
-      children: [
-        // ── 1. Filled floor areas / wall masses ──────────────────────────────
-        PolygonLayer(
-          polygons: data.polygons
-              .map(
-                (ring) => Polygon(
-                  points: ring,
-                  color: const Color(0xFF1E3A1E),
-                  borderColor: const Color(0xFF2E5A2E),
-                  borderStrokeWidth: 0.5,
-                ),
-              )
-              .toList(),
-        ),
-
-        // ── 2. Primary wall outlines ─────────────────────────────────────────
-        PolylineLayer(
-          polylines: data.polylines
-              .map(
-                (pts) => Polyline(
-                  points: pts,
-                  color: const Color(0xFF4CAF50),
-                  strokeWidth: 1.2,
-                ),
-              )
-              .toList(),
-        ),
-
-        // ── 3. Secondary line detail ─────────────────────────────────────────
-        PolylineLayer(
-          polylines: data.secondaryPolylines
-              .map(
-                (pts) => Polyline(
-                  points: pts,
-                  color: const Color(0xFF2E7D32).withOpacity(0.6),
-                  strokeWidth: 0.7,
-                ),
-              )
-              .toList(),
-        ),
-
-        // ── 4. Section label markers ─────────────────────────────────────────
-        MarkerLayer(
-          markers: data.sectionPoints
-              .map(
-                (sp) => Marker(
-                  point: sp.position,
-                  width: 36,
-                  height: 18,
-                  child: _SectionLabel(label: sp.label),
-                ),
-              )
-              .toList(),
-        ),
-
-        // ── 5. User position dot ─────────────────────────────────────────────
-        if (widget.userPosition != null)
-          MarkerLayer(
-            markers: [
-              Marker(
-                point: widget.userPosition!,
-                width: 20,
-                height: 20,
-                child: _UserDot(),
-              ),
-            ],
-          ),
-
-        // ── 6. Target plant marker ───────────────────────────────────────────
-        if (widget.targetPosition != null)
-          MarkerLayer(
-            markers: [
-              Marker(
-                point: widget.targetPosition!,
-                width: 28,
-                height: 28,
-                child: const _TargetPin(),
-              ),
-            ],
-          ),
-      ],
-    );
-=======
     if (_error != null) return _MapError(message: _error!);
     if (_mapData == null) return const _MapLoading();
 
@@ -348,19 +194,10 @@ class _IndoorMapWidgetState extends ConsumerState<IndoorMapWidget>
             ),
           ],
         );
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-<<<<<<< HEAD
-// Small sub-widgets
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label});
-  final String label;
-=======
 // Section label markers
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -368,21 +205,11 @@ class _SectionLabel extends StatelessWidget {
   const _SectionLabel({required this.label, required this.hasPlant});
   final String label;
   final bool hasPlant;
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
 
   @override
   Widget build(BuildContext context) => Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-<<<<<<< HEAD
-          color: Colors.black54,
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: Colors.greenAccent,
-=======
           color: hasPlant
               ? Colors.greenAccent.withOpacity(0.18)
               : Colors.black54,
@@ -398,7 +225,6 @@ class _SectionLabel extends StatelessWidget {
           label,
           style: TextStyle(
             color: hasPlant ? Colors.greenAccent : Colors.white54,
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
             fontSize: 7,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.3,
@@ -407,18 +233,6 @@ class _SectionLabel extends StatelessWidget {
       );
 }
 
-<<<<<<< HEAD
-class _UserDot extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.blueAccent,
-          border: Border.all(color: Colors.white, width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.blueAccent.withOpacity(0.5),
-=======
 class _ActiveSectionLabel extends StatelessWidget {
   const _ActiveSectionLabel({required this.label, required this.opacity});
   final String label;
@@ -437,17 +251,11 @@ class _ActiveSectionLabel extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: Colors.greenAccent.withOpacity(0.4 * opacity),
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
               blurRadius: 8,
               spreadRadius: 2,
             ),
           ],
         ),
-<<<<<<< HEAD
-      );
-}
-
-=======
         child: Text(
           label,
           style: const TextStyle(
@@ -520,24 +328,10 @@ class _ZoomButton extends StatelessWidget {
 // Target pin
 // ─────────────────────────────────────────────────────────────────────────────
 
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
 class _TargetPin extends StatelessWidget {
   const _TargetPin();
 
   @override
-<<<<<<< HEAD
-  Widget build(BuildContext context) => const Icon(
-        Icons.eco,
-        color: Colors.greenAccent,
-        size: 28,
-        shadows: [Shadow(blurRadius: 6, color: Colors.black54)],
-      );
-}
-
-class _MapLoading extends StatelessWidget {
-  const _MapLoading();
-
-=======
   Widget build(BuildContext context) => Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -554,7 +348,6 @@ class _MapLoading extends StatelessWidget {
 
 class _MapLoading extends StatelessWidget {
   const _MapLoading();
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
   @override
   Widget build(BuildContext context) => const ColoredBox(
         color: Color(0xFF0D1A0D),
@@ -564,15 +357,8 @@ class _MapLoading extends StatelessWidget {
             children: [
               CircularProgressIndicator(color: Colors.greenAccent),
               SizedBox(height: 14),
-<<<<<<< HEAD
-              Text(
-                'Loading floor plan…',
-                style: TextStyle(color: Colors.white54),
-              ),
-=======
               Text('Loading floor plan…',
                   style: TextStyle(color: Colors.white54)),
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
             ],
           ),
         ),
@@ -582,10 +368,6 @@ class _MapLoading extends StatelessWidget {
 class _MapError extends StatelessWidget {
   const _MapError({required this.message});
   final String message;
-<<<<<<< HEAD
-
-=======
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
   @override
   Widget build(BuildContext context) => ColoredBox(
         color: const Color(0xFF0D1A0D),
@@ -597,18 +379,6 @@ class _MapError extends StatelessWidget {
               children: [
                 const Icon(Icons.map_outlined, color: Colors.white38, size: 48),
                 const SizedBox(height: 12),
-<<<<<<< HEAD
-                const Text(
-                  'Could not load floor plan',
-                  style: TextStyle(color: Colors.white),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white38, fontSize: 11),
-                ),
-=======
                 const Text('Could not load floor plan',
                     style: TextStyle(color: Colors.white)),
                 const SizedBox(height: 8),
@@ -616,14 +386,9 @@ class _MapError extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                         color: Colors.white38, fontSize: 11)),
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
               ],
             ),
           ),
         ),
       );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5

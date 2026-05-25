@@ -9,15 +9,8 @@ import '../screens/plant_list_screen.dart';
 import '../screens/outdoor_navigation_screen.dart';
 import '../screens/arrival_screen.dart';
 import '../screens/greenhouse_map_screen.dart';
-<<<<<<< HEAD
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Route names — use these constants instead of string literals everywhere.
-// ─────────────────────────────────────────────────────────────────────────────
-=======
 import '../screens/treasure_hunt_screen.dart';
 import '../screens/hunt_camera_screen.dart';
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
 
 abstract final class AppRoutes {
   static const plantList    = '/';
@@ -83,15 +76,9 @@ GoRouter buildRouter(WidgetRef ref) {
         },
       ),
 
-<<<<<<< HEAD
-      // ── Greenhouse floor plan ──────────────────────────────────────────────
-      GoRoute(
-        path: '/greenhouse-map',
-=======
       // ── Greenhouse floor plan (browse) ─────────────────────────────────────
       GoRoute(
         path: AppRoutes.greenhouseMap,
->>>>>>> 1bb466ce91c7732671b0c0712adf7d6204bfc6f5
         name: 'greenhouseMap',
         builder: (context, state) => const GreenhouseMapScreen(),
       ),

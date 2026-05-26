@@ -17,10 +17,11 @@ abstract final class Env {
   static String get googleMapsApiKey =>
       dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
 
-  // ── Anthropic ──────────────────────────────────────────────────────────────
-  /// Used by VisionService to call the Claude API for treasure hunt photo checks.
-  static String get anthropicApiKey =>
-      dotenv.env['ANTHROPIC_API_KEY'] ?? '';
+  // ── Gemini ─────────────────────────────────────────────────────────────────
+  /// Used by VisionService for treasure hunt photo checks (free tier).
+  /// Get a free key at: https://aistudio.google.com/apikey
+  static String get geminiApiKey =>
+      dotenv.env['GEMINI_API_KEY'] ?? '';
 
   // ── BLE Beacon UUIDs ───────────────────────────────────────────────────────
   // TODO [Backend Phase 3 / Hardware]: Replace with real provisioned UUIDs.

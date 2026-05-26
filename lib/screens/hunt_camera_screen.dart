@@ -1,9 +1,12 @@
 // lib/screens/hunt_camera_screen.dart
 //
-// Camera capture + vision check screen for the treasure hunt.
-// Flow: take photo → preview → submit → show result → next or retry.
+// Camera capture + vision check for the treasure hunt.
+// On result: animated fullscreen overlay pops up —
+//   ✓ Match   → green burst + confetti-style particles → auto-advances after 2.5s
+//   ✗ No match → red shake animation → retry / skip options
 
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,12 +23,12 @@ class HuntCameraScreen extends ConsumerStatefulWidget {
 
 class _HuntCameraScreenState extends ConsumerState<HuntCameraScreen> {
   File? _photo;
+  bool _showResultOverlay = false;
   final _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    // Reset any previous result when opening the screen.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(visionCheckProvider.notifier).reset();
     });
@@ -37,14 +40,33 @@ class _HuntCameraScreenState extends ConsumerState<HuntCameraScreen> {
       imageQuality: 85,
       maxWidth: 1280,
     );
-    if (picked != null) {
-      setState(() => _photo = File(picked.path));
-    }
+    if (picked != null) setState(() => _photo = File(picked.path));
   }
 
   Future<void> _submit() async {
     if (_photo == null) return;
     await ref.read(visionCheckProvider.notifier).check(_photo!);
+    if (mounted) setState(() => _showResultOverlay = true);
+  }
+
+  void _dismissAndRetry() {
+    ref.read(visionCheckProvider.notifier).reset();
+    setState(() {
+      _photo = null;
+      _showResultOverlay = false;
+    });
+  }
+
+  void _dismissAndNext() {
+    ref.read(visionCheckProvider.notifier).reset();
+    setState(() => _showResultOverlay = false);
+    context.go('/treasure-hunt');
+  }
+
+  void _dismissAndSkip() {
+    ref.read(visionCheckProvider.notifier).reset();
+    setState(() => _showResultOverlay = false);
+    context.go('/treasure-hunt');
   }
 
   @override
@@ -59,114 +81,636 @@ class _HuntCameraScreenState extends ConsumerState<HuntCameraScreen> {
 
     final plant = session.currentPlant;
     final hint = plant.hintFor(session.difficulty);
+    final result = checkAsync.whenOrNull(data: (r) => r);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D1A0D),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── Top bar ──────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white70),
-                    onPressed: () => context.go('/treasure-hunt'),
-                  ),
-                  Expanded(
-                    child: Text(
-                      'Take a photo of the plant',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16),
-                    ),
-                  ),
-                  _DifficultyChip(difficulty: session.difficulty),
-                ],
-              ),
-            ),
-
-            // ── Hint reminder ────────────────────────────────────────────────
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A2E1A),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white12),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.lightbulb_outline,
-                      color: Colors.greenAccent, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(hint,
-                        style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                            height: 1.5)),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // ── Photo area ───────────────────────────────────────────────────
-            Expanded(
-              child: checkAsync.when(
-                data: (result) => result != null
-                    ? _ResultOverlay(
-                        photo: _photo!,
-                        result: result,
-                        session: session,
-                        onRetry: () {
-                          ref.read(visionCheckProvider.notifier).reset();
-                          setState(() => _photo = null);
-                        },
-                        onNext: () => context.go('/treasure-hunt'),
-                      )
-                    : _PhotoArea(
-                        photo: _photo,
-                        onTakePhoto: _takePhoto,
+      body: Stack(
+        children: [
+          // ── Main camera UI ────────────────────────────────────────────────
+          SafeArea(
+            child: Column(
+              children: [
+                // Top bar
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back,
+                            color: Colors.white70),
+                        onPressed: () => context.go('/treasure-hunt'),
                       ),
-                loading: () => _LoadingOverlay(photo: _photo),
-                error: (e, _) => _ErrorView(
-                  error: e.toString(),
-                  onRetry: () {
-                    ref.read(visionCheckProvider.notifier).reset();
-                  },
+                      const Expanded(
+                        child: Text(
+                          'Take a photo of the plant',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16),
+                        ),
+                      ),
+                      _DifficultyChip(difficulty: session.difficulty),
+                    ],
+                  ),
+                ),
+
+                // Hint card
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A2E1A),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.lightbulb_outline,
+                          color: Colors.greenAccent, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(hint,
+                            style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                                height: 1.5)),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Photo area / loading
+                Expanded(
+                  child: checkAsync.isLoading
+                      ? _LoadingOverlay(photo: _photo)
+                      : checkAsync.hasError
+                          ? _ErrorView(
+                              error: checkAsync.error.toString(),
+                              onRetry: () {
+                                ref
+                                    .read(visionCheckProvider.notifier)
+                                    .reset();
+                              },
+                            )
+                          : _PhotoArea(
+                              photo: _photo,
+                              onTakePhoto: _takePhoto,
+                            ),
+                ),
+
+                // Submit button
+                if (_photo != null && !checkAsync.isLoading && result == null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _submit,
+                        icon: const Icon(Icons.auto_awesome),
+                        label: const Text('Check with AI'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.tealAccent,
+                          foregroundColor: Colors.black87,
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(32)),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // ── Animated result overlay ───────────────────────────────────────
+          if (_showResultOverlay && result != null)
+            result.matched
+                ? _SuccessOverlay(
+                    result: result,
+                    session: session,
+                    onDone: _dismissAndNext,
+                  )
+                : _FailureOverlay(
+                    result: result,
+                    onRetry: _dismissAndRetry,
+                    onSkip: _dismissAndSkip,
+                  ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Success overlay — green burst + floating particles + auto-advance
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SuccessOverlay extends StatefulWidget {
+  const _SuccessOverlay({
+    required this.result,
+    required this.session,
+    required this.onDone,
+  });
+  final HuntResult result;
+  final HuntSession session;
+  final VoidCallback onDone;
+
+  @override
+  State<_SuccessOverlay> createState() => _SuccessOverlayState();
+}
+
+class _SuccessOverlayState extends State<_SuccessOverlay>
+    with TickerProviderStateMixin {
+  late final AnimationController _bgController;
+  late final AnimationController _iconController;
+  late final AnimationController _textController;
+  late final AnimationController _particleController;
+
+  late final Animation<double> _bgAnim;
+  late final Animation<double> _iconScaleAnim;
+  late final Animation<double> _iconRotateAnim;
+  late final Animation<double> _textAnim;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _bgController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 400));
+    _iconController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 600));
+    _textController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 400));
+    _particleController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1800));
+
+    _bgAnim = CurvedAnimation(parent: _bgController, curve: Curves.easeOut);
+    _iconScaleAnim = TweenSequence([
+      TweenSequenceItem(
+          tween: Tween(begin: 0.0, end: 1.3)
+              .chain(CurveTween(curve: Curves.easeOut)),
+          weight: 60),
+      TweenSequenceItem(
+          tween: Tween(begin: 1.3, end: 1.0)
+              .chain(CurveTween(curve: Curves.elasticOut)),
+          weight: 40),
+    ]).animate(_iconController);
+    _iconRotateAnim = Tween(begin: -0.2, end: 0.0)
+        .animate(CurvedAnimation(
+            parent: _iconController, curve: Curves.elasticOut));
+    _textAnim =
+        CurvedAnimation(parent: _textController, curve: Curves.easeOut);
+
+    // Stagger the animations
+    _bgController.forward();
+    Future.delayed(const Duration(milliseconds: 150),
+        () => _iconController.forward());
+    Future.delayed(const Duration(milliseconds: 400),
+        () => _textController.forward());
+    Future.delayed(const Duration(milliseconds: 200),
+        () => _particleController.forward());
+
+    // Auto-advance after 2.8 seconds
+    Future.delayed(const Duration(milliseconds: 2800), () {
+      if (mounted) widget.onDone();
+    });
+  }
+
+  @override
+  void dispose() {
+    _bgController.dispose();
+    _iconController.dispose();
+    _textController.dispose();
+    _particleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isLast = widget.session.currentIndex >= widget.session.total;
+    final confidence =
+        (widget.result.confidence * 100).toStringAsFixed(0);
+
+    return AnimatedBuilder(
+      animation: _bgAnim,
+      builder: (_, __) => Opacity(
+        opacity: _bgAnim.value,
+        child: Container(
+          color: const Color(0xFF0D2E0D).withOpacity(0.97),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Floating particles
+              AnimatedBuilder(
+                animation: _particleController,
+                builder: (_, __) => CustomPaint(
+                  painter: _ParticlePainter(
+                      progress: _particleController.value),
                 ),
               ),
-            ),
 
-            // ── Submit button ────────────────────────────────────────────────
-            if (_photo != null &&
-                checkAsync.whenOrNull(data: (r) => r) == null &&
-                !checkAsync.isLoading)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: _submit,
-                    icon: const Icon(Icons.auto_awesome),
-                    label: const Text('Check with AI'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.tealAccent,
-                      foregroundColor: Colors.black87,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(32)),
-                    ),
+              // Content
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Animated check icon
+                      AnimatedBuilder(
+                        animation: _iconController,
+                        builder: (_, __) => Transform.rotate(
+                          angle: _iconRotateAnim.value,
+                          child: Transform.scale(
+                            scale: _iconScaleAnim.value,
+                            child: Container(
+                              width: 110,
+                              height: 110,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.greenAccent.withOpacity(0.2),
+                                border: Border.all(
+                                    color: Colors.greenAccent, width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        Colors.greenAccent.withOpacity(0.4),
+                                    blurRadius: 30,
+                                    spreadRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(Icons.check_rounded,
+                                  color: Colors.greenAccent, size: 60),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 28),
+
+                      // Text content
+                      FadeTransition(
+                        opacity: _textAnim,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0, 0.3),
+                            end: Offset.zero,
+                          ).animate(_textAnim),
+                          child: Column(
+                            children: [
+                              const Text(
+                                "That's it! 🌿",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color:
+                                      Colors.greenAccent.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                      color: Colors.greenAccent
+                                          .withOpacity(0.4)),
+                                ),
+                                child: Text(
+                                  '$confidence% match',
+                                  style: const TextStyle(
+                                      color: Colors.greenAccent,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                widget.result.explanation,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                    height: 1.5),
+                              ),
+                              const SizedBox(height: 32),
+                              Text(
+                                isLast
+                                    ? 'Hunt complete!'
+                                    : 'Moving to next plant…',
+                                style: const TextStyle(
+                                    color: Colors.white38, fontSize: 13),
+                              ),
+                              const SizedBox(height: 12),
+                              // Progress dots
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(
+                                  widget.session.total,
+                                  (i) => Container(
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 4),
+                                    width: i < widget.session.currentIndex
+                                        ? 10
+                                        : 8,
+                                    height: i < widget.session.currentIndex
+                                        ? 10
+                                        : 8,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: i < widget.session.currentIndex
+                                          ? Colors.greenAccent
+                                          : Colors.white24,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-          ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Particle painter — floating leaf/dot particles for success
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ParticlePainter extends CustomPainter {
+  _ParticlePainter({required this.progress});
+  final double progress;
+
+  static final _rng = math.Random(42);
+  static final _particles = List.generate(24, (i) => [
+    _rng.nextDouble(), // x start (0–1)
+    _rng.nextDouble(), // y start (0–1)
+    _rng.nextDouble() * 0.4 + 0.1, // size
+    _rng.nextDouble() * 2 - 1, // x drift
+    _rng.nextDouble(), // delay (0–1)
+    _rng.nextInt(4).toDouble(), // shape
+  ]);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final p in _particles) {
+      final delay = p[4];
+      final t = ((progress - delay) / (1 - delay)).clamp(0.0, 1.0);
+      if (t <= 0) continue;
+
+      final x = p[0] * size.width + p[2] * size.width * t;
+      final y = p[1] * size.height - t * size.height * 0.6;
+      final sz = p[2] * 12 + 4;
+      final opacity = (1 - t) * 0.8;
+
+      final paint = Paint()
+        ..color = [
+          Colors.greenAccent,
+          Colors.green,
+          Colors.lightGreenAccent,
+          Colors.tealAccent,
+        ][p[5].toInt()].withOpacity(opacity);
+
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate(t * math.pi * p[3]);
+
+      if (p[5] < 2) {
+        canvas.drawCircle(Offset.zero, sz / 2, paint);
+      } else {
+        final path = Path()
+          ..moveTo(0, -sz / 2)
+          ..cubicTo(sz / 2, -sz / 4, sz / 2, sz / 4, 0, sz / 2)
+          ..cubicTo(-sz / 2, sz / 4, -sz / 2, -sz / 4, 0, -sz / 2);
+        canvas.drawPath(path, paint);
+      }
+
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ParticlePainter old) => old.progress != progress;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Failure overlay — shake animation + red X
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _FailureOverlay extends StatefulWidget {
+  const _FailureOverlay({
+    required this.result,
+    required this.onRetry,
+    required this.onSkip,
+  });
+  final HuntResult result;
+  final VoidCallback onRetry;
+  final VoidCallback onSkip;
+
+  @override
+  State<_FailureOverlay> createState() => _FailureOverlayState();
+}
+
+class _FailureOverlayState extends State<_FailureOverlay>
+    with TickerProviderStateMixin {
+  late final AnimationController _bgController;
+  late final AnimationController _shakeController;
+  late final AnimationController _textController;
+
+  late final Animation<double> _bgAnim;
+  late final Animation<double> _shakeAnim;
+  late final Animation<double> _textAnim;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _bgController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 350));
+    _shakeController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 500));
+    _textController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 400));
+
+    _bgAnim = CurvedAnimation(parent: _bgController, curve: Curves.easeOut);
+    _shakeAnim = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: -16.0), weight: 15),
+      TweenSequenceItem(tween: Tween(begin: -16.0, end: 16.0), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 16.0, end: -10.0), weight: 25),
+      TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0), weight: 20),
+      TweenSequenceItem(tween: Tween(begin: 10.0, end: 0.0), weight: 10),
+    ]).animate(CurvedAnimation(
+        parent: _shakeController, curve: Curves.easeInOut));
+    _textAnim =
+        CurvedAnimation(parent: _textController, curve: Curves.easeOut);
+
+    _bgController.forward();
+    Future.delayed(
+        const Duration(milliseconds: 100), () => _shakeController.forward());
+    Future.delayed(
+        const Duration(milliseconds: 400), () => _textController.forward());
+  }
+
+  @override
+  void dispose() {
+    _bgController.dispose();
+    _shakeController.dispose();
+    _textController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final confidence =
+        (widget.result.confidence * 100).toStringAsFixed(0);
+
+    return AnimatedBuilder(
+      animation: _bgAnim,
+      builder: (_, __) => Opacity(
+        opacity: _bgAnim.value,
+        child: Container(
+          color: const Color(0xFF1A0000).withOpacity(0.95),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Shaking X icon
+                  AnimatedBuilder(
+                    animation: _shakeController,
+                    builder: (_, __) => Transform.translate(
+                      offset: Offset(_shakeAnim.value, 0),
+                      child: Container(
+                        width: 110,
+                        height: 110,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.red.withOpacity(0.15),
+                          border:
+                              Border.all(color: Colors.redAccent, width: 3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withOpacity(0.3),
+                              blurRadius: 24,
+                              spreadRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.close_rounded,
+                            color: Colors.redAccent, size: 60),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // Text + buttons
+                  FadeTransition(
+                    opacity: _textAnim,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.3),
+                        end: Offset.zero,
+                      ).animate(_textAnim),
+                      child: Column(
+                        children: [
+                          const Text(
+                            'Not quite… 🔍',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                  color: Colors.redAccent.withOpacity(0.4)),
+                            ),
+                            child: Text(
+                              '$confidence% match',
+                              style: const TextStyle(
+                                  color: Colors.redAccent,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            widget.result.explanation,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                                height: 1.5),
+                          ),
+                          const SizedBox(height: 36),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: widget.onSkip,
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.white54,
+                                    side: const BorderSide(
+                                        color: Colors.white24),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(32)),
+                                  ),
+                                  child: const Text('Skip'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 2,
+                                child: FilledButton.icon(
+                                  onPressed: widget.onRetry,
+                                  icon: const Icon(Icons.camera_alt, size: 18),
+                                  label: const Text('Try again'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: Colors.redAccent,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(32)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -290,155 +834,8 @@ class _LoadingOverlay extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Result overlay
+// Error view
 // ─────────────────────────────────────────────────────────────────────────────
-
-class _ResultOverlay extends StatelessWidget {
-  const _ResultOverlay({
-    required this.photo,
-    required this.result,
-    required this.session,
-    required this.onRetry,
-    required this.onNext,
-  });
-
-  final File photo;
-  final HuntResult result;
-  final HuntSession session;
-  final VoidCallback onRetry;
-  final VoidCallback onNext;
-
-  @override
-  Widget build(BuildContext context) {
-    final isMatch = result.matched;
-    final color = isMatch ? Colors.greenAccent : Colors.redAccent;
-    final icon = isMatch ? Icons.check_circle : Icons.cancel_outlined;
-    final title = isMatch ? 'That\'s the one! ✓' : 'Not quite…';
-
-    return Column(
-      children: [
-        // Photo with result tint
-        Expanded(
-          child: Stack(
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  image: DecorationImage(
-                    image: FileImage(photo),
-                    fit: BoxFit.cover,
-                    colorFilter: ColorFilter.mode(
-                      (isMatch ? Colors.green : Colors.red).withOpacity(0.15),
-                      BlendMode.overlay,
-                    ),
-                  ),
-                ),
-              ),
-              // Badge
-              Positioned(
-                top: 16,
-                right: 32,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon, color: Colors.black87, size: 16),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${(result.confidence * 100).toStringAsFixed(0)}% match',
-                        style: const TextStyle(
-                            color: Colors.black87,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Result card
-        Container(
-          margin: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A2E1A),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.4)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(icon, color: color, size: 20),
-                  const SizedBox(width: 8),
-                  Text(title,
-                      style: TextStyle(
-                          color: color,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16)),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(result.explanation,
-                  style: const TextStyle(
-                      color: Colors.white70, fontSize: 13, height: 1.5)),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  if (!isMatch)
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: onRetry,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white60,
-                          side: const BorderSide(color: Colors.white24),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24)),
-                        ),
-                        child: const Text('Try again'),
-                      ),
-                    ),
-                  if (!isMatch) const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: onNext,
-                      style: FilledButton.styleFrom(
-                        backgroundColor:
-                            isMatch ? Colors.greenAccent : Colors.white24,
-                        foregroundColor:
-                            isMatch ? Colors.black87 : Colors.white,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24)),
-                      ),
-                      child: Text(
-                        isMatch
-                            ? (session.currentIndex >= session.total
-                                ? 'See results'
-                                : 'Next plant →')
-                            : 'Skip',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.error, required this.onRetry});
@@ -476,6 +873,10 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Difficulty chip
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _DifficultyChip extends StatelessWidget {
   const _DifficultyChip({required this.difficulty});

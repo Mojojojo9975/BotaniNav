@@ -62,10 +62,23 @@ Respond ONLY with valid JSON — no markdown, no extra text:
           ],
         },
       ],
+      // Safety filters entirely disabled to allow botanical terminology
       'safetySettings': [
         {
           'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-          'threshold': 'BLOCK_ONLY_HIGH',
+          'threshold': 'BLOCK_NONE',
+        },
+        {
+          'category': 'HARM_CATEGORY_HATE_SPEECH',
+          'threshold': 'BLOCK_NONE',
+        },
+        {
+          'category': 'HARM_CATEGORY_HARASSMENT',
+          'threshold': 'BLOCK_NONE',
+        },
+        {
+          'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
+          'threshold': 'BLOCK_NONE',
         },
       ],
       'generationConfig': {
@@ -96,18 +109,15 @@ Respond ONLY with valid JSON — no markdown, no extra text:
           body: requestBody,
         );
 
-        // If successful, or if it's an error we shouldn't retry (like 400 Bad Request)
         if (response.statusCode == 200 || 
            (response.statusCode != 503 && response.statusCode != 429)) {
           break;
         }
 
-        // If it's a 503 or 429 and we have attempts left, wait and try again
         if (attempt < maxAttempts) {
-          await Future.delayed(Duration(seconds: attempt)); // Exponential backoff: 1s, 2s...
+          await Future.delayed(Duration(seconds: attempt));
         }
       } catch (e) {
-        // Handle network drops (e.g., SocketException)
         if (attempt == maxAttempts) {
           throw Exception('Network error: Unable to reach the AI. Please check your connection and try again.');
         }
@@ -128,19 +138,22 @@ Respond ONLY with valid JSON — no markdown, no extra text:
       throw Exception('API Error ${response.statusCode}: ${response.body}');
     }
 
-    // ── JSON Parsing ────────────────────────────────────────────────────────
+    // ── JSON Parsing & Safety Checks ────────────────────────────────────────
     final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final candidate = (body['candidates'] as List).first;
+    
+    // Check WHY the AI stopped typing
+    final finishReason = candidate['finishReason'] as String?;
+    if (finishReason != null && finishReason != 'STOP') {
+      throw Exception('AI generation aborted. Reason: $finishReason');
+    }
 
-    final text = (body['candidates'] as List)
-        .first['content']['parts']
-        .first['text'] as String;
+    final text = candidate['content']['parts'].first['text'] as String;
 
     try {
-      // Because responseMimeType is application/json, 'text' is already pure JSON!
       final result = jsonDecode(text.trim()) as Map<String, dynamic>;
       return HuntResult.fromJson(result, plant.id);
     } on FormatException catch (_) {
-      // TEMPORARY DEBUGGING: Let's see exactly what the AI output was if it fails
       throw Exception('JSON Error. Raw output was: \n\n$text');
     } catch (e) {
       throw Exception('Failed to read AI response: $e');

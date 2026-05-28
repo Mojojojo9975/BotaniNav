@@ -148,13 +148,16 @@ class _HeroHeader extends StatelessWidget {
               const SizedBox(height: 24),
 
               // ── Stat chips ────────────────────────────────────────────────────
-              const Row(
+              Row(
                 children: [
-                  _StatChip(icon: Icons.park_outlined, label: 'Outdoor trails'),
-                  SizedBox(width: 10),
-                  _StatChip(icon: Icons.home_work_outlined, label: 'Greenhouses'),
-                  SizedBox(width: 10),
-                  _StatChip(icon: Icons.near_me_outlined, label: 'Live guidance'),
+                  const _StatChip(icon: Icons.park_outlined, label: 'Outdoor trails'),
+                  const SizedBox(width: 10),
+                  const _StatChip(icon: Icons.home_work_outlined, label: 'Greenhouses'),
+                  const SizedBox(width: 10),
+                  Transform.translate(
+                    offset: const Offset(0, -4.7),
+                    child: const _StatChip(icon: Icons.help_outline, label: 'Help'),
+                  ),
                 ],
               ),
 

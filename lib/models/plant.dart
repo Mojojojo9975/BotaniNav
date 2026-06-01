@@ -23,6 +23,8 @@ class Plant extends Equatable {
     this.placementStatus,
     this.imageUrl,
     this.thumbnailUrl,
+    this.gpsLat,
+    this.gpsLng,
   });
 
   /// taxonNumber from API — used as primary key.
@@ -67,6 +69,15 @@ class Plant extends Equatable {
   final String? imageUrl;
   final String? thumbnailUrl;
 
+  /// Real-world GPS coordinates for outdoor plants.
+  /// Set by the backend after importing from the coordinate picker tool.
+  /// Null until coordinates have been assigned.
+  final double? gpsLat;
+  final double? gpsLng;
+
+  /// True if this outdoor plant has real GPS coordinates assigned.
+  bool get hasGpsCoords => gpsLat != null && gpsLng != null;
+
   String? get displayImageUrl => thumbnailUrl ?? imageUrl;
   bool get hasImage => imageUrl != null || thumbnailUrl != null;
 
@@ -109,6 +120,8 @@ class Plant extends Equatable {
       placementStatus: placement['plantStatus'] as String?,
       imageUrl:        json['image_url'] as String? ?? json['image'] as String?,
       thumbnailUrl:    json['thumbnail_url'] as String?,
+      gpsLat:          (json['gps_lat'] as num?)?.toDouble(),
+      gpsLng:          (json['gps_lng'] as num?)?.toDouble(),
     );
   }
 
@@ -130,6 +143,8 @@ class Plant extends Equatable {
         },
         if (imageUrl != null) 'image_url': imageUrl,
         if (thumbnailUrl != null) 'thumbnail_url': thumbnailUrl,
+        if (gpsLat != null) 'gps_lat': gpsLat,
+        if (gpsLng != null) 'gps_lng': gpsLng,
       };
 
   Plant copyWith({
@@ -138,6 +153,7 @@ class Plant extends Equatable {
     String? description, String? section, bool? isIndoor,
     double? latitude, double? longitude, String? greenhouseId,
     String? placementStatus, String? imageUrl, String? thumbnailUrl,
+    double? gpsLat, double? gpsLng,
   }) => Plant(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -154,6 +170,8 @@ class Plant extends Equatable {
     placementStatus: placementStatus ?? this.placementStatus,
     imageUrl: imageUrl ?? this.imageUrl,
     thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+    gpsLat: gpsLat ?? this.gpsLat,
+    gpsLng: gpsLng ?? this.gpsLng,
   );
 
   @override
@@ -161,6 +179,7 @@ class Plant extends Equatable {
     id, name, scientificName, finnishName, synonym, family,
     description, section, isIndoor, latitude, longitude,
     greenhouseId, placementStatus, imageUrl, thumbnailUrl,
+    gpsLat, gpsLng,
   ];
 
   @override

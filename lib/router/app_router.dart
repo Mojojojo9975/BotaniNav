@@ -9,8 +9,10 @@ import '../screens/plant_list_screen.dart';
 import '../screens/outdoor_navigation_screen.dart';
 import '../screens/arrival_screen.dart';
 import '../screens/greenhouse_map_screen.dart';
+import '../screens/outdoor_map_screen.dart';
 import '../screens/treasure_hunt_screen.dart';
 import '../screens/hunt_camera_screen.dart';
+import '../config/section_config.dart';
 
 abstract final class AppRoutes {
   static const plantList    = '/';
@@ -74,6 +76,13 @@ GoRouter buildRouter(WidgetRef ref) {
           final plantId = state.pathParameters['plantId']!;
           return GreenhouseMapScreen(plantId: plantId);
         },
+      ),
+
+      // ── Outdoor plant map (browse) ─────────────────────────────────────────
+      GoRoute(
+        path: '/outdoor-map',
+        name: 'outdoorMap',
+        builder: (context, state) => const OutdoorMapScreen(),
       ),
 
       // ── Greenhouse floor plan (browse) ─────────────────────────────────────

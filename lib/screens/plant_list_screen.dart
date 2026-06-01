@@ -147,24 +147,13 @@ class _HeroHeader extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // ── Stat chips ────────────────────────────────────────────────────
-              Row(
-                children: [
-                  const _StatChip(icon: Icons.park_outlined, label: 'Outdoor trails'),
-                  const SizedBox(width: 10),
-                  const _StatChip(icon: Icons.home_work_outlined, label: 'Greenhouses'),
-                  const SizedBox(width: 10),
-                  Transform.translate(
-                    offset: const Offset(0, -4.7),
-                    child: const _StatChip(icon: Icons.help_outline, label: 'Help'),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
               // ── Greenhouse map button ─────────────────────────────────────────
               _GreenhouseMapButton(),
+
+              const SizedBox(height: 10),
+
+              // ── Outdoor map button ────────────────────────────────────────────
+              _OutdoorMapButton(),
 
               const SizedBox(height: 10),
 
@@ -288,6 +277,29 @@ class _GreenhouseMapButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           foregroundColor: Colors.greenAccent,
           side: const BorderSide(color: Colors.greenAccent, width: 1.2),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OutdoorMapButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => context.go('/outdoor-map'),
+        icon: const Icon(Icons.park_outlined, size: 18),
+        label: const Text('View Outdoor Plant Map'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.lightGreenAccent,
+          side: const BorderSide(
+              color: Colors.lightGreenAccent, width: 1.2),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(32),

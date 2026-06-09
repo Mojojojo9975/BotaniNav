@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BotanicNav — Plant Coordinate Picker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:#0a120a; --surface:#111a11; --surface2:#182018;
+    --border:#2a3d2a; --green:#4ade80; --green-dim:#22c55e22;
+    --green-glow:#4ade8033; --amber:#fbbf24; --red:#f87171;
+    --text:#e2f0e2; --text-dim:#6b8f6b; --text-muted:#3d5c3d;
+    --mono:'DM Mono',monospace; --sans:'DM Sans',sans-serif;
+    --serif:'DM Serif Display',serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);
+    height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  header{display:flex;align-items:center;justify-content:space-between;
+    padding:14px 24px;border-bottom:1px solid var(--border);
+    background:var(--surface);flex-shrink:0;gap:16px}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo-leaf{width:32px;height:32px;background:linear-gradient(135deg,#166534,#0d9488);
+    border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:16px;box-shadow:0 0 12px var(--green-glow)}
+  .logo h1{font-family:var(--serif);font-size:18px;color:var(--text);line-height:1}
+  .logo span{font-family:var(--mono);font-size:10px;color:var(--green);
+    letter-spacing:2px;text-transform:uppercase;display:block;margin-top:1px}
+  .status-bar{font-family:var(--mono);font-size:11px;color:var(--text-dim);
+    padding:4px 10px;background:var(--bg);border:1px solid var(--border);border-radius:4px}
+  .status-bar b{color:var(--green)}
+  .main{display:flex;flex:1;overflow:hidden}
+  .sidebar{width:320px;flex-shrink:0;background:var(--surface);
+    border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+  .sidebar-header{padding:16px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+  .sidebar-header h2{font-family:var(--mono);font-size:11px;color:var(--green);
+    letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+  .search-box{width:100%;background:var(--bg);border:1px solid var(--border);
+    border-radius:6px;padding:7px 10px;color:var(--text);font-family:var(--sans);
+    font-size:13px;outline:none;transition:border-color .2s}
+  .search-box:focus{border-color:var(--green)}
+  .search-box::placeholder{color:var(--text-muted)}
+  .filter-row{display:flex;gap:6px;margin-top:8px}
+  .filter-btn{flex:1;padding:5px 8px;background:var(--bg);border:1px solid var(--border);
+    border-radius:4px;color:var(--text-dim);font-family:var(--mono);font-size:10px;
+    cursor:pointer;transition:all .15s;letter-spacing:.5px}
+  .filter-btn:hover{border-color:var(--green);color:var(--green)}
+  .filter-btn.active{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+  .plant-list{flex:1;overflow-y:auto;padding:8px}
+  .plant-list::-webkit-scrollbar{width:4px}
+  .plant-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  .plant-item{padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:4px;
+    border:1px solid transparent;transition:all .15s;position:relative}
+  .plant-item:hover{background:var(--surface2);border-color:var(--border)}
+  .plant-item.selected{background:var(--green-dim);border-color:var(--green)}
+  .plant-item.has-coords{opacity:.65}
+  .plant-item.has-coords::after{content:'✓';position:absolute;right:12px;top:50%;
+    transform:translateY(-50%);color:var(--green);font-size:14px;font-weight:bold}
+  .plant-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px}
+  .plant-scientific{font-family:var(--mono);font-size:10px;color:var(--text-dim);
+    font-style:italic;margin-bottom:3px}
+  .plant-meta{display:flex;gap:6px;flex-wrap:wrap}
+  .tag{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;
+    background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);letter-spacing:.5px}
+  .tag.section{color:var(--amber);border-color:#fbbf2444}
+  .tag.coords{color:var(--green);border-color:var(--green-dim)}
+  .map-area{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+  #map{flex:1;cursor:crosshair !important}
+  .instruction{position:absolute;top:16px;left:50%;transform:translateX(-50%);
+    background:var(--surface);border:1px solid var(--border);border-radius:8px;
+    padding:10px 18px;font-family:var(--mono);font-size:12px;color:var(--text-dim);
+    pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px #00000055;
+    transition:all .3s;z-index:10}
+  .instruction.active{border-color:var(--green);color:var(--green);
+    box-shadow:0 4px 20px var(--green-glow)}
+  .coord-popup{position:absolute;bottom:80px;left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--surface);border:1px solid var(--green);border-radius:10px;
+    padding:14px 20px;font-family:var(--mono);font-size:12px;z-index:10;
+    box-shadow:0 8px 32px var(--green-glow);opacity:0;pointer-events:none;
+    min-width:300px;text-align:center;
+    transition:all .25s cubic-bezier(.34,1.56,.64,1)}
+  .coord-popup.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+  .popup-plant{color:var(--green);font-size:11px;letter-spacing:1px;
+    text-transform:uppercase;margin-bottom:6px}
+  .popup-coords{color:var(--text);font-size:14px;margin-bottom:12px;letter-spacing:.5px}
+  .popup-actions{display:flex;gap:8px;justify-content:center}
+  .btn{padding:7px 16px;border-radius:6px;font-family:var(--mono);font-size:11px;
+    cursor:pointer;border:1px solid;transition:all .15s;letter-spacing:.5px}
+  .btn-confirm{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+  .btn-confirm:hover{background:#4ade8033}
+  .btn-cancel{background:transparent;border-color:var(--border);color:var(--text-dim)}
+  .btn-cancel:hover{border-color:var(--red);color:var(--red)}
+  .bottom-bar{position:absolute;bottom:0;left:0;right:0;padding:12px 20px;
+    background:var(--surface);border-top:1px solid var(--border);display:flex;
+    align-items:center;justify-content:space-between;gap:12px;z-index:5}
+  .progress-info{font-family:var(--mono);font-size:11px;color:var(--text-dim)}
+  .progress-info b{color:var(--green)}
+  .progress-bar-wrap{flex:1;height:4px;background:var(--border);border-radius:2px;
+    overflow:hidden;max-width:200px}
+  .progress-bar-fill{height:100%;background:var(--green);border-radius:2px;
+    transition:width .4s ease;box-shadow:0 0 8px var(--green)}
+  .btn-export{padding:8px 20px;background:linear-gradient(135deg,#166534,#0d9488);
+    border:none;border-radius:6px;color:white;font-family:var(--mono);font-size:11px;
+    cursor:pointer;letter-spacing:1px;text-transform:uppercase;
+    transition:all .2s;box-shadow:0 2px 12px var(--green-glow)}
+  .btn-export:hover{transform:translateY(-1px);box-shadow:0 4px 20px var(--green-glow)}
+  .btn-export:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .modal-bg{position:fixed;inset:0;background:#000000cc;display:flex;
+    align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px)}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:32px;width:440px;box-shadow:0 20px 60px #000000aa}
+  .modal h3{font-family:var(--serif);font-size:22px;margin-bottom:8px;color:var(--text)}
+  .modal p{font-size:13px;color:var(--text-dim);margin-bottom:20px;line-height:1.6}
+  .modal input{width:100%;background:var(--bg);border:1px solid var(--border);
+    border-radius:8px;padding:10px 14px;color:var(--text);font-family:var(--mono);
+    font-size:13px;outline:none;margin-bottom:12px;transition:border-color .2s}
+  .modal input:focus{border-color:var(--green)}
+  .modal .btn-primary{width:100%;padding:11px;
+    background:linear-gradient(135deg,#166534,#0d9488);
+    border:none;border-radius:8px;color:white;font-family:var(--mono);
+    font-size:12px;cursor:pointer;letter-spacing:1px;text-transform:uppercase}
+  .toast{position:fixed;top:70px;right:20px;background:var(--surface);
+    border:1px solid var(--green);border-radius:8px;padding:10px 16px;
+    font-family:var(--mono);font-size:12px;color:var(--green);z-index:200;
+    transform:translateX(120%);
+    transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+    box-shadow:0 4px 20px var(--green-glow)}
+  .toast.show{transform:translateX(0)}
+  .empty-state{padding:32px 16px;text-align:center}
+  .empty-state p{font-family:var(--mono);font-size:11px;color:var(--text-muted);line-height:1.6}
+  code{color:var(--green);font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+
+<!-- API Key Modal -->
+<div class="modal-bg" id="apiModal">
+  <div class="modal">
+    <h3>🗺 Map Setup</h3>
+    <p>Enter your Google Maps API key to load the satellite view of the garden. This is the same key already in your Flutter <code>.env</code> file under <code>GOOGLE_MAPS_API_KEY</code>.</p>
+    <input type="text" id="apiKeyInput" placeholder="AIzaSy…"/>
+    <button class="btn-primary" onclick="initWithKey()">Load Map →</button>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-leaf">🌿</div>
+    <div>
+      <h1>BotanicNav</h1>
+      <span>Coordinate Picker</span>
+    </div>
+  </div>
+  <div class="status-bar" id="statusBar">
+    Select a plant from the list, then click its location on the map
+  </div>
+</header>
+
+<!-- Main layout -->
+<div class="main">
+
+  <!-- Plant sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Plants</h2>
+      <input class="search-box" id="searchInput" type="text"
+             placeholder="Search name or section…" oninput="renderList()"/>
+      <div class="filter-row">
+        <button class="filter-btn active" id="filterAll"     onclick="setFilter('all')">All</button>
+        <button class="filter-btn"        id="filterPending" onclick="setFilter('pending')">Pending</button>
+        <button class="filter-btn"        id="filterDone"    onclick="setFilter('done')">Mapped</button>
+      </div>
+    </div>
+    <div class="plant-list" id="plantList"></div>
+  </div>
+
+  <!-- Map -->
+  <div class="map-area">
+    <div id="map"></div>
+
+    <!-- Floating instruction -->
+    <div class="instruction" id="instruction">
+      ← Select a plant from the list to begin
+    </div>
+
+    <!-- Confirm coordinate popup -->
+    <div class="coord-popup" id="coordPopup">
+      <div class="popup-plant"  id="popupName"></div>
+      <div class="popup-coords" id="popupCoords"></div>
+      <div class="popup-actions">
+        <button class="btn btn-cancel"  onclick="cancelPin()">Cancel</button>
+        <button class="btn btn-confirm" onclick="confirmPin()">Confirm ✓</button>
+      </div>
+    </div>
+
+    <!-- Bottom progress + export bar -->
+    <div class="bottom-bar">
+      <div class="progress-info">
+        <b id="doneCount">0</b> / <span id="totalCount">0</span> plants mapped
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+      </div>
+      <button class="btn-export" id="exportBtn" onclick="exportJSON()" disabled>
+        Export JSON
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let map, selectedPlant = null, pendingMarker = null, pendingLatLng = null;
+let filter = 'all';
+const markers = {};   // id → google.maps.Marker
+const coords  = {};   // id → {lat, lng}
+let plants    = [];   // normalised plant list
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+function initWithKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) { alert('Please enter your Google Maps API key.'); return; }
+  document.getElementById('apiModal').style.display = 'none';
+  const s = document.createElement('script');
+  s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&callback=initMap`;
+  s.async = true;
+  document.head.appendChild(s);
+}
+
+window.initMap = function () {
+  // Centred on Oulu Botanical Garden — Kaitoväylä 5, 90570 Oulu, Finland
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat: 65.01215, lng: 25.46512 },
+    zoom: 19,
+    mapTypeId: 'satellite',
+    tilt: 0,
+    mapTypeControl: true,
+    streetViewControl: false,
+    fullscreenControl: false,
+  });
+  map.addListener('click', onMapClick);
+
+  // Try to fetch live API; fall back to embedded demo data
+  fetchPlants();
+};
+
+// ─── Load plants ──────────────────────────────────────────────────────────────
+async function fetchPlants() {
+  // Change this URL to your live API endpoint if accessible from a browser.
+  // e.g. 'https://your-backend.com/api/v1/plants'
+  // If the API has CORS enabled, it will load automatically.
+  const API_URL = null; // set to your endpoint string to enable live loading
+
+  try {
+    if (!API_URL) throw new Error('No API URL set — using demo data');
+    const res  = await fetch(API_URL);
+    const data = await res.json();
+    const list = data.plants || data;
+    plants = list.map(normalisePlant);
+    showToast(`Loaded ${plants.length} plants from API`);
+  } catch (e) {
+    plants = DEMO_PLANTS.map(normalisePlant);
+    showToast('Using demo plant data');
+  }
+
+  renderList();
+  updateProgress();
+}
+
+function normalisePlant(p) {
+  return {
+    id:         String(p.taxonNumber || p.id),
+    name:       p.name        || '',
+    finnishName:p.finnishName || '',
+    family:    (p.family && p.family.name) || '',
+    section:   (p.placement && p.placement.square) || '',
+  };
+}
+
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+function setFilter(f) {
+  filter = f;
+  ['filterAll','filterPending','filterDone'].forEach(id =>
+    document.getElementById(id).classList.remove('active'));
+  document.getElementById(
+    f==='all' ? 'filterAll' : f==='pending' ? 'filterPending' : 'filterDone'
+  ).classList.add('active');
+  renderList();
+}
+
+function renderList() {
+  const q    = document.getElementById('searchInput').value.toLowerCase();
+  const list = document.getElementById('plantList');
+
+  const filtered = plants.filter(p => {
+    const has = !!coords[p.id];
+    if (filter==='pending' && has)  return false;
+    if (filter==='done'    && !has) return false;
+    if (q && !p.name.toLowerCase().includes(q) &&
+             !p.finnishName.toLowerCase().includes(q) &&
+             !p.section.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty-state"><p>No plants<br>match this filter.</p></div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(p => {
+    const has = !!coords[p.id];
+    const sel = selectedPlant && selectedPlant.id === p.id;
+    return `
+      <div class="plant-item ${sel?'selected':''} ${has?'has-coords':''}"
+           onclick="selectPlant('${p.id}')">
+        <div class="plant-name">${p.finnishName || p.name}</div>
+        <div class="plant-scientific">${p.name}</div>
+        <div class="plant-meta">
+          <span class="tag section">${p.section}</span>
+          ${p.family ? `<span class="tag">${p.family}</span>` : ''}
+          ${has ? `<span class="tag coords">mapped</span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ─── Plant selection ──────────────────────────────────────────────────────────
+function selectPlant(id) {
+  selectedPlant = plants.find(p => p.id === id);
+  cancelPin();
+  renderList();
+
+  const instr = document.getElementById('instruction');
+  instr.textContent =
+    `Click the exact location of: ${selectedPlant.finnishName || selectedPlant.name}`;
+  instr.className = 'instruction active';
+
+  // Pan to existing marker if already mapped
+  if (coords[id] && markers[id]) {
+    map.panTo(markers[id].getPosition());
+    map.setZoom(Math.max(map.getZoom(), 20));
+  }
+}
+
+// ─── Map click → drop pending pin ────────────────────────────────────────────
+function onMapClick(e) {
+  if (!selectedPlant) return;
+  pendingLatLng = e.latLng;
+
+  if (pendingMarker) pendingMarker.setMap(null);
+
+  pendingMarker = new google.maps.Marker({
+    position:  pendingLatLng,
+    map,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 10, fillColor: '#4ade80', fillOpacity: 0.9,
+      strokeColor: '#fff', strokeWeight: 2,
+    },
+    animation: google.maps.Animation.DROP,
+    zIndex: 999,
+  });
+
+  const lat = pendingLatLng.lat().toFixed(6);
+  const lng = pendingLatLng.lng().toFixed(6);
+
+  document.getElementById('popupName').textContent =
+    (selectedPlant.finnishName || selectedPlant.name).toUpperCase();
+  document.getElementById('popupCoords').textContent = `${lat},  ${lng}`;
+  document.getElementById('coordPopup').classList.add('show');
+}
+
+// ─── Confirm pin ──────────────────────────────────────────────────────────────
+function confirmPin() {
+  if (!selectedPlant || !pendingLatLng) return;
+
+  // Save coordinate
+  coords[selectedPlant.id] = {
+    lat: pendingLatLng.lat(),
+    lng: pendingLatLng.lng(),
+  };
+
+  // Replace pending marker with permanent green pin
+  if (pendingMarker)              pendingMarker.setMap(null);
+  if (markers[selectedPlant.id]) markers[selectedPlant.id].setMap(null);
+
+  markers[selectedPlant.id] = new google.maps.Marker({
+    position: pendingLatLng,
+    map,
+    title: selectedPlant.finnishName || selectedPlant.name,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 8, fillColor: '#22c55e', fillOpacity: 1,
+      strokeColor: '#fff', strokeWeight: 2,
+    },
+    label: {
+      text: selectedPlant.section,
+      color: '#fff', fontSize: '9px',
+      fontFamily: 'DM Mono, monospace',
+    },
+  });
+
+  pendingMarker = null;
+  pendingLatLng = null;
+  document.getElementById('coordPopup').classList.remove('show');
+
+  showToast(`✓  ${selectedPlant.finnishName || selectedPlant.name}`);
+  updateProgress();
+
+  // Auto-advance to next unmapped plant
+  const next = plants.find(p => !coords[p.id] && p.id !== selectedPlant.id);
+  if (next) {
+    selectPlant(next.id);
+  } else {
+    selectedPlant = null;
+    document.getElementById('instruction').textContent =
+      'All plants mapped — export JSON below!';
+    document.getElementById('instruction').className = 'instruction active';
+    renderList();
+  }
+}
+
+function cancelPin() {
+  if (pendingMarker) { pendingMarker.setMap(null); pendingMarker = null; }
+  pendingLatLng = null;
+  document.getElementById('coordPopup').classList.remove('show');
+}
+
+// ─── Progress ─────────────────────────────────────────────────────────────────
+function updateProgress() {
+  const done  = Object.keys(coords).length;
+  const total = plants.length;
+  document.getElementById('doneCount').textContent  = done;
+  document.getElementById('totalCount').textContent = total;
+  document.getElementById('progressFill').style.width =
+    (total > 0 ? (done / total) * 100 : 0) + '%';
+  document.getElementById('exportBtn').disabled = done === 0;
+  document.getElementById('statusBar').innerHTML =
+    `<b>${done}</b> of ${total} plants mapped`;
+  renderList();
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+// Output format for your backend developer:
+// [{ "taxonNumber": 1007, "gps_lat": 65.012345, "gps_lng": 25.465123 }, ...]
+function exportJSON() {
+  const output = Object.entries(coords).map(([id, c]) => ({
+    taxonNumber: parseInt(id),
+    gps_lat:     parseFloat(c.lat.toFixed(7)),
+    gps_lng:     parseFloat(c.lng.toFixed(7)),
+  }));
+
+  const blob = new Blob(
+    [JSON.stringify(output, null, 2)],
+    { type: 'application/json' }
+  );
+  const a = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'plant_coordinates.json';
+  a.click();
+
+  showToast(`Exported ${output.length} plant coordinates`);
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ─── Demo plant data ──────────────────────────────────────────────────────────
+// Mirrors your live API response structure exactly.
+// Set API_URL above to load from the real endpoint instead.
+const DEMO_PLANTS = [
+  { taxonNumber:1001, name:"Monstera deliciosa",    finnishName:"Sveitsinjuustokasvi",  family:{name:"Araceae"},        placement:{square:"A-12"} },
+  { taxonNumber:1002, name:"Victoria amazonica",    finnishName:"Jättiläisvesililja",   family:{name:"Nymphaeaceae"},   placement:{square:"A-8"}  },
+  { taxonNumber:1003, name:"Strelitzia reginae",    finnishName:"Paratiisilintukasvit", family:{name:"Strelitziaceae"}, placement:{square:"B-3"}  },
+  { taxonNumber:1004, name:"Ficus benjamina",       finnishName:"Koivuviikunapuu",      family:{name:"Moraceae"},       placement:{square:"B-6"}  },
+  { taxonNumber:1005, name:"Olea europaea",         finnishName:"Euroopanöljypuu",      family:{name:"Oleaceae"},       placement:{square:"D-5"}  },
+  { taxonNumber:1006, name:"Nerium oleander",       finnishName:"Oleanteri",            family:{name:"Apocynaceae"},    placement:{square:"D-9"}  },
+  { taxonNumber:1007, name:"Quercus robur",         finnishName:"Tammi",                family:{name:"Fagaceae"},       placement:{square:"E-4"}  },
+  { taxonNumber:1008, name:"Betula pendula",        finnishName:"Rauduskoivu",          family:{name:"Betulaceae"},     placement:{square:"E-7"}  },
+  { taxonNumber:1009, name:"Aloe vera",             finnishName:"Lääkealoe",            family:{name:"Asphodelaceae"},  placement:{square:"F-2"}  },
+  { taxonNumber:1010, name:"Euphorbia canariensis", finnishName:"Kanarianeuphorbia",    family:{name:"Euphorbiaceae"},  placement:{square:"F-5"}  },
+  { taxonNumber:1011, name:"Nepenthes rajah",       finnishName:"Kannukasvi",           family:{name:"Nepenthaceae"},   placement:{square:"A-3"}  },
+  { taxonNumber:1012, name:"Cycas revoluta",        finnishName:"Käpypalmu",            family:{name:"Cycadaceae"},     placement:{square:"D-2"}  },
+];
+</script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+name: botanical_nav
+description: Botanical garden navigation system — frontend for BotanicNav platform.
+version: 1.0.0+1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.7.0 <4.0.0'
+  flutter: '>=3.29.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ── Maps & Location ──────────────────────────────────────────────────────────
+  google_maps_flutter: ^2.9.0
+  geolocator: ^13.0.0
+
+  # ── Indoor Map ───────────────────────────────────────────────────────────────
+  flutter_map: ^7.0.0
+  latlong2: ^0.9.0
+
+  # ── BLE ──────────────────────────────────────────────────────────────────────
+  flutter_blue_plus: ^1.35.0
+
+  # ── Sensors ──────────────────────────────────────────────────────────────────
+  sensors_plus: ^7.0.0
+
+  # ── Permissions ──────────────────────────────────────────────────────────────
+  permission_handler: ^11.3.0         # Runtime permission requests on device
+
+  # ── QR Scanning ──────────────────────────────────────────────────────────────
+  mobile_scanner: ^6.0.0
+
+  # ── Camera / Image Picker (Treasure Hunt) ────────────────────────────────────
+  image_picker: ^1.1.2
+
+  # ── Networking ───────────────────────────────────────────────────────────────
+  web_socket_channel: ^3.0.0
+  http: ^1.4.0
+
+  # ── Routing ──────────────────────────────────────────────────────────────────
+  go_router: ^16.0.0
+
+  # ── State Management ─────────────────────────────────────────────────────────
+  flutter_riverpod: ^3.0.0
+  riverpod_annotation: ^3.0.0
+
+  # ── Config ───────────────────────────────────────────────────────────────────
+  flutter_dotenv: ^5.2.0
+
+  # ── Utilities ────────────────────────────────────────────────────────────────
+  equatable: ^2.0.7
+  flutter_polyline_points: ^3.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  build_runner: ^2.6.0
+  riverpod_generator: ^3.0.0
+  custom_lint: ^0.8.1
+  riverpod_lint: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+    - assets/maps/Section_Layer.geojson
+    - assets/maps/Section_Layer_1.geojson
+    - assets/maps/Section_Layer_2.geojson
+    - assets/maps/Section_Layer_3.geojson
+    - assets/hunt/plants.json

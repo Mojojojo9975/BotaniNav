@@ -12,7 +12,7 @@ import '../screens/greenhouse_map_screen.dart';
 import '../screens/outdoor_map_screen.dart';
 import '../screens/treasure_hunt_screen.dart';
 import '../screens/hunt_camera_screen.dart';
-import '../config/section_config.dart';
+import '../screens/trail_navigation_screen.dart';
 
 abstract final class AppRoutes {
   static const plantList    = '/';
@@ -22,6 +22,7 @@ abstract final class AppRoutes {
   static const greenhouseMap = '/greenhouse-map';
   static const treasureHunt  = '/treasure-hunt';
   static const huntCamera    = '/treasure-hunt/camera';
+  static const trailNav     = '/navigate/trail';
 }
 
 GoRouter buildRouter(WidgetRef ref) {
@@ -83,6 +84,17 @@ GoRouter buildRouter(WidgetRef ref) {
         path: '/outdoor-map',
         name: 'outdoorMap',
         builder: (context, state) => const OutdoorMapScreen(),
+      ),
+
+      // ── Trail navigation ───────────────────────────────────────────────────
+      GoRoute(
+        path: AppRoutes.trailNav,
+        name: 'trailNav',
+        builder: (context, state) {
+          final plantsStr = state.uri.queryParameters['plants'] ?? '';
+          final plantIds = plantsStr.split(',').where((s) => s.isNotEmpty).toList();
+          return TrailNavigationScreen(plantIds: plantIds);
+        },
       ),
 
       // ── Greenhouse floor plan (browse) ─────────────────────────────────────

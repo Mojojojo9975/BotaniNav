@@ -3,10 +3,12 @@
 // Browse map — shows all outdoor plants as markers on Google Maps.
 // No active navigation. Tapping a marker starts navigation to that plant.
 
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import '../models/plant.dart';
 import '../providers/plant_provider.dart';
 import '../providers/navigation_provider.dart';
@@ -22,6 +24,18 @@ class _OutdoorMapScreenState extends ConsumerState<OutdoorMapScreen> {
   GoogleMapController? _mapController;
   Plant? _selectedPlant;
 
+  // Trail builder state variables
+  bool _trailMode = false;
+  final List<Plant> _trailPlants = [];
+  final Map<int, BitmapDescriptor> _numberedIcons = {};
+  bool _iconsLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNumberedIcons();
+  }
+
   @override
   void dispose() {
     _mapController?.dispose();
@@ -31,6 +45,98 @@ class _OutdoorMapScreenState extends ConsumerState<OutdoorMapScreen> {
   void _onMapCreated(GoogleMapController c) {
     _mapController = c;
     _mapController?.setMapStyle(_mapStyle);
+  }
+
+  Future<void> _loadNumberedIcons() async {
+    if (_iconsLoaded) return;
+    for (int i = 1; i <= 10; i++) {
+      final icon = await _createNumberedMarkerIcon(i);
+      _numberedIcons[i] = icon;
+    }
+    if (mounted) {
+      setState(() {
+        _iconsLoaded = true;
+      });
+    }
+  }
+
+  Future<BitmapDescriptor> _createNumberedMarkerIcon(int number) async {
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+    const double size = 80.0;
+
+    // Draw marker background circle
+    final Paint paint = Paint()..color = Colors.lightGreenAccent;
+    canvas.drawCircle(const Offset(size / 2, size / 2), size / 2, paint);
+
+    final Paint borderPaint = Paint()
+      ..color = const Color(0xFF0D1A0D)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5.0;
+    canvas.drawCircle(const Offset(size / 2, size / 2), (size / 2) - 2.5, borderPaint);
+
+    // Draw number text
+    final TextPainter textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.text = TextSpan(
+      text: '$number',
+      style: const TextStyle(
+        fontSize: 36.0,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF0D1A0D),
+      ),
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        (size - textPainter.width) / 2,
+        (size - textPainter.height) / 2,
+      ),
+    );
+
+    final image = await pictureRecorder.endRecording().toImage(size.toInt(), size.toInt());
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(data!.buffer.asUint8List());
+  }
+
+  void _toggleTrailMode() {
+    setState(() {
+      _trailMode = !_trailMode;
+      _selectedPlant = null;
+      _trailPlants.clear();
+    });
+  }
+
+  double _calculateEstimatedDistance(LatLng? userPos) {
+    if (_trailPlants.isEmpty) return 0.0;
+    double total = 0.0;
+    LatLng current = userPos ?? LatLng(_trailPlants.first.gpsLat!, _trailPlants.first.gpsLng!);
+    
+    // If we have user position, first leg is user to plant 1
+    if (userPos != null) {
+      total += Geolocator.distanceBetween(
+        current.latitude, current.longitude,
+        _trailPlants.first.gpsLat!, _trailPlants.first.gpsLng!,
+      );
+    }
+    
+    for (int i = 0; i < _trailPlants.length - 1; i++) {
+      total += Geolocator.distanceBetween(
+        _trailPlants[i].gpsLat!, _trailPlants[i].gpsLng!,
+        _trailPlants[i+1].gpsLat!, _trailPlants[i+1].gpsLng!,
+      );
+    }
+    return total;
+  }
+
+  String _formatDistance(double meters) {
+    if (meters >= 1000) {
+      return '${(meters / 1000).toStringAsFixed(1)} km';
+    } else {
+      return '${meters.toStringAsFixed(0)} m';
+    }
   }
 
   @override
@@ -50,21 +156,57 @@ class _OutdoorMapScreenState extends ConsumerState<OutdoorMapScreen> {
       final outdoor = plants.where((p) => !p.isIndoor).toList();
       for (final p in outdoor) {
         if (!p.hasGpsCoords) { unmapped++; continue; }
+        
+        final trailIndex = _trailPlants.indexWhere((tp) => tp.id == p.id);
+        final isSelectedInTrail = _trailMode && trailIndex >= 0;
         final isSelected = _selectedPlant?.id == p.id;
-        markers.add(Marker(
-          markerId: MarkerId(p.id),
-          position: LatLng(p.gpsLat!, p.gpsLng!),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
+        
+        BitmapDescriptor icon;
+        if (_trailMode) {
+          if (isSelectedInTrail) {
+            icon = _numberedIcons[trailIndex + 1] ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+          } else {
+            icon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueCyan);
+          }
+        } else {
+          icon = BitmapDescriptor.defaultMarkerWithHue(
             isSelected
                 ? BitmapDescriptor.hueGreen
                 : BitmapDescriptor.hueCyan,
-          ),
+          );
+        }
+
+        markers.add(Marker(
+          markerId: MarkerId(p.id),
+          position: LatLng(p.gpsLat!, p.gpsLng!),
+          icon: icon,
           infoWindow: InfoWindow(
-            title: p.displayName,
+            title: _trailMode
+                ? (isSelectedInTrail ? '#${trailIndex + 1} · ${p.displayName}' : p.displayName)
+                : p.displayName,
             snippet: '${p.name} · Section ${p.section}',
           ),
-          zIndex: isSelected ? 2 : 1,
-          onTap: () => setState(() => _selectedPlant = p),
+          zIndex: isSelectedInTrail ? 3 : (isSelected ? 2 : 1),
+          onTap: () {
+            if (_trailMode) {
+              setState(() {
+                final index = _trailPlants.indexWhere((tp) => tp.id == p.id);
+                if (index >= 0) {
+                  _trailPlants.removeAt(index);
+                } else {
+                  if (_trailPlants.length < 10) {
+                    _trailPlants.add(p);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Maximum 10 plants in a trail')),
+                    );
+                  }
+                }
+              });
+            } else {
+              setState(() => _selectedPlant = p);
+            }
+          },
         ));
       }
     });
@@ -86,7 +228,11 @@ class _OutdoorMapScreenState extends ConsumerState<OutdoorMapScreen> {
             zoomControlsEnabled: false,
             mapToolbarEnabled: false,
             markers: markers,
-            onTap: (_) => setState(() => _selectedPlant = null),
+            onTap: (_) {
+              if (!_trailMode) {
+                setState(() => _selectedPlant = null);
+              }
+            },
           ),
 
           // ── Top bar ───────────────────────────────────────────────────────
@@ -118,10 +264,10 @@ class _OutdoorMapScreenState extends ConsumerState<OutdoorMapScreen> {
                     const Icon(Icons.park_outlined,
                         color: Colors.lightGreenAccent, size: 18),
                     const SizedBox(width: 8),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Outdoor Plant Map',
-                        style: TextStyle(
+                        _trailMode ? 'Trail Builder' : 'Outdoor Plant Map',
+                        style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 15),
@@ -186,7 +332,7 @@ class _OutdoorMapScreenState extends ConsumerState<OutdoorMapScreen> {
             ),
 
           // ── Selected plant card ───────────────────────────────────────────
-          if (_selectedPlant != null)
+          if (!_trailMode && _selectedPlant != null)
             Positioned(
               bottom: 24, left: 16, right: 16,
               child: _PlantCard(
@@ -197,9 +343,43 @@ class _OutdoorMapScreenState extends ConsumerState<OutdoorMapScreen> {
               ),
             ),
 
+          // ── Trail builder bottom card ───────────────────────────────────────
+          if (_trailMode)
+            Positioned(
+              bottom: 24, left: 16, right: 16,
+              child: _TrailBuilderCard(
+                selectedCount: _trailPlants.length,
+                distanceString: _formatDistance(_calculateEstimatedDistance(userPos)),
+                onStart: _trailPlants.isEmpty
+                    ? null
+                    : () {
+                        final plantIds = _trailPlants.map((p) => p.id).join(',');
+                        context.go('/navigate/trail?plants=$plantIds');
+                      },
+                onCancel: _toggleTrailMode,
+              ),
+            ),
+
+          // ── Build Trail FAB ───────────────────────────────────────────────
+          if (!_trailMode)
+            Positioned(
+              bottom: _selectedPlant != null ? 210 : 130,
+              right: 16,
+              child: FloatingActionButton.extended(
+                heroTag: 'build_trail',
+                backgroundColor: const Color(0xFF1A2E1A),
+                foregroundColor: Colors.lightGreenAccent,
+                icon: const Icon(Icons.route),
+                label: const Text('Build Trail'),
+                onPressed: _toggleTrailMode,
+              ),
+            ),
+
           // ── My location button ────────────────────────────────────────────
           Positioned(
-            bottom: _selectedPlant != null ? 160 : 80,
+            bottom: _trailMode
+                ? 210
+                : (_selectedPlant != null ? 160 : 80),
             right: 16,
             child: FloatingActionButton.small(
               heroTag: 'locate',
@@ -356,6 +536,136 @@ class _PlantCard extends StatelessWidget {
         child: const Icon(Icons.park_outlined,
             color: Colors.lightGreenAccent, size: 32),
       );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Trail builder bottom card
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _TrailBuilderCard extends StatelessWidget {
+  const _TrailBuilderCard({
+    required this.selectedCount,
+    required this.distanceString,
+    required this.onStart,
+    required this.onCancel,
+  });
+
+  final int selectedCount;
+  final String distanceString;
+  final VoidCallback? onStart;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A2E1A),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+              color: Colors.lightGreenAccent.withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.4),
+                blurRadius: 16, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.route, color: Colors.lightGreenAccent, size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  'Trail Builder',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: onCancel,
+                  child: const Icon(Icons.close, color: Colors.white38, size: 20),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Tap plants on the map in the order you want to visit them.',
+              style: TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.lightGreenAccent.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: Colors.lightGreenAccent.withOpacity(0.4)),
+                  ),
+                  child: Text(
+                    '$selectedCount / 10 plants',
+                    style: const TextStyle(
+                        color: Colors.lightGreenAccent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                if (selectedCount > 0)
+                  Text(
+                    'Est. Distance: ~$distanceString',
+                    style: const TextStyle(color: Colors.white54, fontSize: 13),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onCancel,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white70,
+                      side: const BorderSide(color: Colors.white30),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: onStart,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.lightGreenAccent,
+                      foregroundColor: Colors.black87,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text(
+                      'Start Trail',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

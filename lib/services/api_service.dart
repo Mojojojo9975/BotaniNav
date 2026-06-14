@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../config/env.dart';
 import '../models/plant.dart';
 import '../models/navigation_state.dart';
+import '../models/trail_route.dart';
 
 /// Thrown when the backend returns a non-2xx status.
 class ApiException implements Exception {
@@ -122,6 +123,22 @@ class ApiService {
     // Intended implementation when ready:
     // final data = await _post('/scan', {'section_id': sectionId});
     // return data as Map<String, dynamic>;
+  }
+
+  /// POST /api/v1/navigation/trail
+  /// Accepts an ordered list of [plantIds] and the user's current position.
+  /// Returns a [TrailRoute] with one leg per plant.
+  Future<TrailRoute> getTrailRoute({
+    required List<String> plantIds,
+    required double userLat,
+    required double userLng,
+  }) async {
+    final data = await _post('/navigation/trail', {
+      'plant_ids': plantIds,
+      'user_lat': userLat,
+      'user_lng': userLng,
+    });
+    return TrailRoute.fromJson(data as Map<String, dynamic>);
   }
 
   void dispose() => _client.close();

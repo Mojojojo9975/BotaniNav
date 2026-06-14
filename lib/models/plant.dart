@@ -96,7 +96,13 @@ class Plant extends Equatable {
         enriched['square_id'] as String? ?? '';
     final section = rawSquare.replaceAll('-', '');
 
-    final isIndoor = SectionConfig.isIndoor(section);
+    // Parse GPS coords before deciding indoor/outdoor — a plant with real
+    // GPS coordinates was tagged via the coordinate picker and is outdoor,
+    // even if its section label (e.g. "A-12") matches an indoor section.
+    final gpsLat = (json['gps_lat'] as num?)?.toDouble();
+    final gpsLng = (json['gps_lng'] as num?)?.toDouble();
+    final hasGps = gpsLat != null && gpsLng != null;
+    final isIndoor = hasGps ? false : SectionConfig.isIndoor(section);
 
     // enriched.square_x is longitude, square_y is latitude in GeoJSON space.
     final lng = (enriched['square_x'] as num?)?.toDouble();
@@ -120,8 +126,8 @@ class Plant extends Equatable {
       placementStatus: placement['plantStatus'] as String?,
       imageUrl:        json['image_url'] as String? ?? json['image'] as String?,
       thumbnailUrl:    json['thumbnail_url'] as String?,
-      gpsLat:          (json['gps_lat'] as num?)?.toDouble(),
-      gpsLng:          (json['gps_lng'] as num?)?.toDouble(),
+      gpsLat:          gpsLat,
+      gpsLng:          gpsLng,
     );
   }
 

@@ -13,7 +13,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geolocator/geolocator.dart';
 import '../models/navigation_state.dart';
 import '../models/plant.dart';
 import '../providers/navigation_provider.dart';
@@ -136,16 +135,32 @@ class _OutdoorNavigationScreenState
     // Route polyline
     Set<Polyline> polylines = {};
     routeAsync.whenOrNull(data: (route) {
+      final points = _decodePolyline(route.polyline);
       polylines = {
         Polyline(
           polylineId: const PolylineId('route'),
-          points: _decodePolyline(route.polyline),
+          points: points,
           color: Colors.greenAccent,
-          width: 5,
+          width: 6,
+          patterns: [PatternItem.dot, PatternItem.gap(12)],
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
           jointType: JointType.round,
         ),
+        if (points.isNotEmpty)
+          Polyline(
+            polylineId: const PolylineId('connector'),
+            points: [
+              points.last,
+              LatLng(route.destinationLat, route.destinationLng),
+            ],
+            color: Colors.greenAccent.withOpacity(0.6),
+            width: 4,
+            patterns: [PatternItem.dash(8), PatternItem.gap(8)],
+            startCap: Cap.roundCap,
+            endCap: Cap.roundCap,
+            jointType: JointType.round,
+          ),
       };
     });
 
@@ -164,6 +179,7 @@ class _OutdoorNavigationScreenState
           // ── Google Map ─────────────────────────────────────────────────────
           GoogleMap(
             onMapCreated: _onMapCreated,
+            mapType: MapType.hybrid,
             initialCameraPosition: CameraPosition(
               target: initialTarget, zoom: 17),
             myLocationEnabled: true,

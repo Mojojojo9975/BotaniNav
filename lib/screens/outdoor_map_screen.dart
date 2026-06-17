@@ -218,6 +218,7 @@ class _OutdoorMapScreenState extends ConsumerState<OutdoorMapScreen> {
           // ── Map ───────────────────────────────────────────────────────────
           GoogleMap(
             onMapCreated: _onMapCreated,
+            mapType: MapType.hybrid,
             initialCameraPosition: const CameraPosition(
               // Always open centred on Oulu Botanical Garden
               target: LatLng(65.0638, 25.4638),

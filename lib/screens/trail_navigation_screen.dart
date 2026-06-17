@@ -119,17 +119,36 @@ class _TrailNavigationScreenState
           : isCurrent
               ? Colors.greenAccent
               : Colors.tealAccent.withOpacity(0.55);
-      final width = isCurrent ? 5 : 3;
+      final width = isCurrent ? 6 : 4;
+
+      final points = _decodePolyline(leg.polyline);
 
       polylines.add(Polyline(
         polylineId: PolylineId('leg_$i'),
-        points: _decodePolyline(leg.polyline),
+        points: points,
         color: color,
         width: width,
+        patterns: [PatternItem.dot, PatternItem.gap(12)],
         startCap: Cap.roundCap,
         endCap:   Cap.roundCap,
         jointType: JointType.round,
       ));
+
+      if (points.isNotEmpty) {
+        polylines.add(Polyline(
+          polylineId: PolylineId('connector_$i'),
+          points: [
+            points.last,
+            LatLng(leg.destinationLat, leg.destinationLng),
+          ],
+          color: color.withOpacity(0.6),
+          width: 4,
+          patterns: [PatternItem.dash(8), PatternItem.gap(8)],
+          startCap: Cap.roundCap,
+          endCap:   Cap.roundCap,
+          jointType: JointType.round,
+        ));
+      }
 
       // Marker hue
       final hue = isDone
@@ -240,6 +259,7 @@ class _TrailNavigationScreenState
           // ── Map ─────────────────────────────────────────────────────────────
           GoogleMap(
             onMapCreated: _onMapCreated,
+            mapType: MapType.hybrid,
             initialCameraPosition: CameraPosition(target: initialTarget, zoom: 17),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
